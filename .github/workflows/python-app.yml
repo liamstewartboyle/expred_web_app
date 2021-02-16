@@ -34,4 +34,4 @@ jobs:
     - name: Test with pytest
       run: |
         echo "$BING_CUSTOM_SEARCH_CONFIG_ID" "$BING_SUBSCRIPTION_KEY"
-        python bing_util.py
+        #python bing_util.py
