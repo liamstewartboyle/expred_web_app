@@ -33,4 +33,5 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
+        echo "$BING_CUSTOM_SEARCH_CONFIG_ID" "$BING_SUBSCRIPTION_KEY"
         python bing_util.py
