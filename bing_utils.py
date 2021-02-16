@@ -15,7 +15,7 @@ def get_wiki_page_id(text):
 
 
 def get_bing_search_urls(res):
-    for page in ret['webPages']['value']:
+    for page in res['webPages']['value']:
         wiki_ret = requests.get(page['url'])
 
 
