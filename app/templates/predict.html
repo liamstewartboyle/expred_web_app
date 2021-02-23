@@ -3,29 +3,27 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" 
 integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> </head>
 <body style="background-color:black"> <div id="maintext" 
-style="position:absolute; margin:auto; width:700px; height:300px; text-align:center; top:0; bottom: 0; left: 0; right: 0;">
+style="position:absolute; margin:auto; width:100%; height:300px; text-align:center; top:0; bottom: 0; left: 5%; right: 5%;">
   <h1 class="text-light mb-5"> Verification </h1>
   <p class="text-light"> Your statement was verified as follows: </p>
-  <table class="table-bordered text-light" style="width:100%">
+  <table class="table-bordered text-light" style="width:90%">
   <tr>
     <th>Statement</th> <th>Verification</th>  <th>Evidence</th> <th> Wikipage </th>
   </tr>
   <tr>
-    <td> {{ query }} </td> <td>{{ pred.cls0 }}</td>  <td>{{ pred.evi0 }} </td> <td> {{ pred.link0 }} </td>
-  </tr>
-  <tr>
-    <td> {{ query }} </td> <td>{{ pred.cls1 }}</td> <td>{{ pred.evi1 }} </td> <td> {{ pred.link1 }} </td>
-  </tr> 
-  <tr>
-    <td> {{ query }} </td> <td>{{ pred.cls2 }}</td> <td>{{ pred.evi2 }} </td> <td> {{ pred.link2 }} </td>
-  </tr>
+    <td> {{ pred.query }} </td> <td>{{ pred.clses[0]|safe|escape }}</td>  <td>{{ pred.evis[0]|safe|escape }} </td> <td> {{ pred.links[0]|safe|escape }} </td>
+    </tr>
+    <td> - </td> <td>{{ pred.clses[1]|safe|escape }}</td>  <td>{{ pred.evis[1]|safe|escape }} </td> <td> {{ pred.links[1]|safe|escape }} </td>
+    </tr>
+    <td> - </td> <td>{{ pred.clses[1]|safe|escape }}</td>  <td>{{ pred.evis[1]|safe|escape }} </td> <td> {{ pred.links[2]|safe|escape }} </td>
+    </tr>
   </table> 
 <h3 class="text-light mb-2"> Do you agree with this prediction? </h3>
   
 <form mehtod='post'>
-<input type='submit', name='eval', value='Yes!'> <input type='submit', name='eval', value='No!'>
+<input type='submit', name='eval', value='Yes!'> <input type='submit', name='eval', value='No...'>
 </form>
-<a href="{{ url_for('main_page') }}"><button class="button mt-3">Try other statement?</button></a>
+<a href="{{ url_for('main_page') }}"><button class="button mt-3">Try other statements?</button></a>
 </div>
 </body>
 </html>

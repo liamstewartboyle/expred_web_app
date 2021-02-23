@@ -2,7 +2,7 @@ import json
 import requests
 import yaml
 
-with open('credentials.yaml') as f:
+with open('azure_search/credentials.yaml') as f:
     data = yaml.load(f, Loader=yaml.FullLoader)
     subscriptionKey = data['subscriptionKey']
     customConfigId = data['customConfigId']
