@@ -3,27 +3,47 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" 
 integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> </head>
 <body style="background-color:black"> <div id="maintext" 
-style="position:absolute; margin:auto; width:100%; height:300px; text-align:center; top:0; bottom: 0; left: 5%; right: 5%;">
-  <h1 class="text-light mb-5"> Verification </h1>
-  <p class="text-light"> Your statement was verified as follows: </p>
-  <table class="table-bordered text-light" style="width:90%">
+style="position:absolute; margin:auto; width:90%; height:300px; text-align:center; top:0; bottom: 0; left: 5%; right: 5%;">
+  <h1 class="text-light mb-5"> Verification Results: </h1>
+  <p class="text-light"> Your claim was verified by following documents we found from the Wikipedia, do you agree with them?</p>
+  <form id='feedback' method=post>
+  <table class="table-bordered text-light" style=" margin-bottom: 30px; width:100%">
   <tr>
-    <th>Statement</th> <th>Verification</th>  <th>Evidence</th> <th> Wikipage </th>
+    <th>Statement</th> <th>Verification</th>  <th>Evidence</th> <th> Wikipage </th> <th> Agree? </th>
   </tr>
+  {% for i in range( pred.clses|length ) %}
   <tr>
-    <td> {{ pred.query }} </td> <td>{{ pred.clses[0]|safe|escape }}</td>  <td>{{ pred.evis[0]|safe|escape }} </td> <td> {{ pred.links[0]|safe|escape }} </td>
-    </tr>
-    <td> - </td> <td>{{ pred.clses[1]|safe|escape }}</td>  <td>{{ pred.evis[1]|safe|escape }} </td> <td> {{ pred.links[1]|safe|escape }} </td>
+    <td> {{ pred.query }} </td>
+    <td>{{ pred.clses[i]|safe|escape }}</td>
+    <td>
+      <span style="float: left;margin-left: 7px;">
+        {{ pred.evis[i]|safe|escape }} 
+      </span>
+    </td> 
+    <td> {{ pred.links[i]|safe|escape }} </td> 
+    <td> 
+      <span style="display:grid;">
+        <span style='display: inline;margin-top: 7px;'>
+          <input type="radio" id='agree{{ i }}y' name="agree{{ i }}" value='y' checked style="float: left;margin-right: 5px;margin-top: 6px;margin-left: 7px;">
+          <label for="agree{{ i }}y" style="float: left;">Yes</label>
+        </span>
+        <span style="display: inline">
+          <input type="radio" id='agree{{ i }}n' name="agree{{ i }}" value="n" style="float: left;margin-right: 5px;margin-top: 6px;margin-left: 7px;">
+          <label for="agree{{ i }}n" style="float: left;">No</label>
+        </span>
+      </span>
+    </td>
+  </tr>
+  {% endfor %}
+    <!-- <td> - </td> <td>{{ pred.clses[1]|safe|escape }}</td>  <td>{{ pred.evis[1]|safe|escape }} </td> <td> {{ pred.links[1]|safe|escape }} </td>
     </tr>
     <td> - </td> <td>{{ pred.clses[1]|safe|escape }}</td>  <td>{{ pred.evis[1]|safe|escape }} </td> <td> {{ pred.links[2]|safe|escape }} </td>
-    </tr>
+    </tr> -->
   </table> 
-<h3 class="text-light mb-2"> Do you agree with this prediction? </h3>
-  
-<form method='post'>
-<input type='submit', name='satisfy', value='Yes!'> <input type='submit', name='satisfy', value='No...'>
+<!-- <h3 class="text-light mb-2"> Do you agree with this prediction? </h3> -->
+<input type='submit', name='submit', value='Next step'>
 </form>
-<a href="{{ url_for('main_page') }}"><button class="button mt-3">Try another statement?</button></a>
+<a href="{{ url_for('main_page') }}"><button class="button mt-3">Go back to the main page</button></a>
 </div>
 </body>
 </html>

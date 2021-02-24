@@ -3,32 +3,33 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" 
 integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> </head>
 <body style="background-color:black"> <div id="maintext" 
-style="position:absolute; margin:auto; width:100%; max-width: 90% height:300px; text-align:center; top:0; bottom: 0; left: 5%; right: 5%;">
+style="position:absolute; margin:auto; width:90%; max-width: 90% height:300px; text-align:center; top:0; bottom: 0; left: 5%; right: 5%;">
   <h1 class="text-light mb-5"> Do following documents SUPPORT or REFUTE your following statement:</h1>
   <h2 class="text-light mb-5"> "{{ query }}"" </h2>
   <h1 class="text-light mb-5"> Please choose your answer and select the <span style="background: tomato">words</span> supporting your decision. </h1>
-  <form method=post style="display:grid;">
-  {% for i in range(3) %}
-    <p>
+  <form method=post style="display: grid;">
+  {% for i in range( docs|length ) %}
+    <span style='display: inline;'>
       {% for j in range( docs[i][0]|length ) %}
-        <input class="doc" type='checkbox' id="exp{{ i }},{{ j }}" name="exp{{ i }},{{ j }}" value='{{ j }}' style="float: left; display: none"> 
-        <label for="exp{{ i }},{{ j }}" onclick='toggle_background(this)' style="color: white; background: black; float:left"> 
+        <input type='checkbox' id="exp{{ i }},{{ j }}" name="exp{{ i }},{{ j }}" value='{{ j }}' style="display: none" class="{{ exps[i][j] }}"> 
+        <label for="exp{{ i }},{{ j }}" onclick='toggle_background(this)' style="color: white; background: black; float:left;"> 
           {{ docs[i][0][j] }}&nbsp;
         </label>
       {% endfor %}
-    </p>
-  <span style='display:block'>
-  <h5 for="cls" class="text-light mb-5" style="float:left">This document&nbsp;</h5>
-  <select id="cls{{ i }}" name="cls{{ i }}" style="float:left">
-    <option value="SUPPORTS">supports</option>
-    <option value="REFUTES">refutes</option>
-    <option value="IRRELEVANT">is irrelevant with</option>
+    </span>
+  <span style="display: inline;">
+  <h5 for="cls" class="text-light" style="float: left;">This document&nbsp;</h5>
+  <select id="cls{{ i }}" name="cls{{ i }}" class='{{ labels[i] }}', style="float: left;">
+    <option value="SUPPORTS", id='cls{{i}}_SUPPORTS'>supports my statement.</option>
+    <option value="REFUTES", id='cls{{i}}_REFUTES'>refutes my statement.</option>
+    <option value="IRRELEVANT">is irrelevant with my statement.</option>
+    <option value='BAD_DOC'>is misleading regarding my claim.</option>
   </select>
-  <h5 for='cls' class="text-light mb-5" style="float:left">&nbsp;my statement.</h5>
   </span>
   {% endfor %}
-  <input type="submit" value='Submit'>
+  <span><input type="submit" value='Submit'></span>
   </form>
+  </span>
 <a href="{{ url_for('main_page') }}"><button class="button mt-3">Try another statement?</button></a>
 </div>
 
@@ -43,11 +44,22 @@ style="position:absolute; margin:auto; width:100%; max-width: 90% height:300px; 
     }
   }
   window.onload = function() {
+    var all_ps = document.getElementsByTagName("select");
+    for (var i=0, max=all_ps.length; i < max; i++) {
+      var cls_select = document.getElementById('cls' + parseInt(i));
+      var selected = cls_select.className;
+      console.log(selected);
+      cls_select.value = selected;
+    }
+
     var all_labels = document.getElementsByTagName("label");
     for (var i=0, max=all_labels.length; i < max; i++) {
-      var element = all_labels[i]
-      var cbid = element.htmlFor
-      var cb = document.getElementById(cbid)
+      var element = all_labels[i];
+      var cbid = element.htmlFor;
+      var cb = document.getElementById(cbid);
+      if (cb.className == "1" || cb.className == '1.0') {
+        cb.checked = true;
+      }
       if (cb.checked) {
         element.style.background = 'tomato'
       } else {
