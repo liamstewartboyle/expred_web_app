@@ -13,3 +13,4 @@ pytorch-pretrained-bert=0.6.2=py37_0
 scipy=1.6.0=py37h91f5cce_0
 tokenizers=0.9.4=py37h17e0dd7_1
 transformers=3.0.2=py_0
+importlib-metadata=3.4.0=py37h89c1867_0
