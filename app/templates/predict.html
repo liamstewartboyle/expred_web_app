@@ -1,26 +1,36 @@
-<!doctype html> <html> <head>
+<!doctype html> <html> 
+<head>
     <title>Your Prediction!</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" 
-integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> </head>
-<body style="background-color:black"> <div id="maintext" 
-style="position:absolute; margin:auto; width:90%; height:300px; text-align:center; top:0; bottom: 0; left: 5%; right: 5%;">
-  <h1 class="text-light mb-5"> Verification Results: </h1>
-  <p class="text-light"> Your claim was verified by following documents we found from the Wikipedia, do you agree with them?</p>
+integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> 
+    <style>
+      .table-element {
+        padding: 4px;
+      }
+    </style>
+    <!-- <link rel='stylesheet' href='/templates/pred.css'> -->
+</head>
+<body style="background-color:white"> <div id="maintext" 
+style="position:absolute; margin:auto; width:80%; text-align:center; top:0; bottom: 0; left: 10%; right: 10%; margin-top:50px">
+  <!-- <h1 class="text-dark mb-5"> Verification Results: </h1> -->
+  <h3 class="text-dark"> Your claim </h3>
+  <h1 class='text-dark mb-3'> "{{ pred.query }}"</h1>
+  <h3 class='text-dark mb-5'> was verified by following documents we found from the Wikipedia, do you agree with them?</h3>
   <form id='feedback' method=post>
-  <table class="table-bordered text-light" style=" margin-bottom: 30px; width:100%">
+  <table class="table-bordered text-dark" style=" margin-bottom: 30px; width:100%; font-size: large">
   <tr>
-    <th>Statement</th> <th>Verification</th>  <th>Evidence</th> <th> Wikipage </th> <th> Agree? </th>
+    <!-- <th class="table-element">Statement</th> --> <th class="table-element">Verification</th>  <th class="table-element">Evidence</th> <th class="table-element"> Wikipage </th> <th> Agree? </th>
   </tr>
   {% for i in range( pred.clses|length ) %}
   <tr>
-    <td> {{ pred.query }} </td>
+    <!-- <td> {{ pred.query }} </td> -->
     <td>{{ pred.clses[i]|safe|escape }}</td>
     <td>
       <span style="float: left;margin-left: 7px;">
         {{ pred.evis[i]|safe|escape }} 
       </span>
     </td> 
-    <td> {{ pred.links[i]|safe|escape }} </td> 
+    <td class="table-element"> {{ pred.links[i]|safe|escape }} </td> 
     <td> 
       <span style="display:grid;">
         <span style='display: inline;margin-top: 7px;'>
@@ -40,7 +50,7 @@ style="position:absolute; margin:auto; width:90%; height:300px; text-align:cente
     <td> - </td> <td>{{ pred.clses[1]|safe|escape }}</td>  <td>{{ pred.evis[1]|safe|escape }} </td> <td> {{ pred.links[2]|safe|escape }} </td>
     </tr> -->
   </table> 
-<!-- <h3 class="text-light mb-2"> Do you agree with this prediction? </h3> -->
+<!-- <h3 class="text-dark mb-2"> Do you agree with this prediction? </h3> -->
 <input type='submit', name='submit', value='Next step'>
 </form>
 <a href="{{ url_for('main_page') }}"><button class="button mt-3">Go back to the main page</button></a>
