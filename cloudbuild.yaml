@@ -1,4 +1,4 @@
 steps:
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: gcloud
-  args: ['run', 'deploy', 'faxplain', '--region', 'europe-west2', '--platform', 'managed', '--source', 'app/']
+  args: ['beta', 'run', 'deploy', 'faxplain', '--region', 'europe-west2', '--platform', 'managed', '--source', 'app/']
