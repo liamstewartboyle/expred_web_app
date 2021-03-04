@@ -1,0 +1,2 @@
+app/trained_models/fever/evidence_classifier.pt filter=lfs diff=lfs merge=lfs -text
+app/trained_models/fever/evidence_token_identifier.pt filter=lfs diff=lfs merge=lfs -text
