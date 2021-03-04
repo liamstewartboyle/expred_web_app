@@ -11,4 +11,4 @@ steps:
   - '--platform'
   - 'managed'
   - '--source'
-  - 'app/',
+  - 'app/'
