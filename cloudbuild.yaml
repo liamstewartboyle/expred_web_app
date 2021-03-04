@@ -5,12 +5,10 @@ steps:
   - 'beta'
   - 'run'
   - 'deploy'
-  - 'faxplain'
-  - 'region'
-  - 'europe-west2'
-  - 'platform'
-  - 'managed'
-  - 'source'
-  - 'app/',
-  - '--services'
   - 'default'
+  - '--region'
+  - 'europe-west2'
+  - '--platform'
+  - 'managed'
+  - '--source'
+  - 'app/',
