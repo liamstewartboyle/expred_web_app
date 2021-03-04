@@ -184,9 +184,16 @@ def get_bogus_pred():
     return pred
 
 
+import os
+try:
+    print('creating data folder')
+    os.mkdir('data', '0o755')
+except FileExistsError:
+    print('data folder exists')
 ugc_data_fname = 'data/ugc.csv' # user generated content
 mgc_data_fname = 'data/mgc.csv' # machine genarated content
 temp_data_fname = 'data/temp.csv'
+
 if not os.path.isfile(ugc_data_fname):
     with open(ugc_data_fname, 'w+', newline='') as fout:
         writer = csv.writer(fout)
