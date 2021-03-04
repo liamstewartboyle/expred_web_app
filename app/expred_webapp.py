@@ -4,8 +4,8 @@
 # In[1]:
 
 
-get_ipython().run_line_magic('load_ext', 'autoreload')
-get_ipython().run_line_magic('autoreload', '2')
+#get_ipython().run_line_magic('load_ext', 'autoreload')
+#get_ipython().run_line_magic('autoreload', '2')
 
 
 # In[2]:
@@ -26,7 +26,7 @@ import csv
 
 bert_dir = 'bert-base-uncased'
 evi_finder_loc = './trained_models/fever/evidence_token_identifier.pt'
-cls_loc = 'trained_models/fever/evidence_classifier.pt'
+cls_loc = './trained_models/fever/evidence_classifier.pt'
 classes = ["SUPPORTS", "REFUTES"]
 device = torch.device('cpu')
 top = 3
