@@ -10,7 +10,7 @@ markdown==3.3.3
 markupsafe==1.1.1 
 torch==1.5.0
 pytorch-pretrained-bert==0.6.2 
-scipy==1.6.0 
+#scipy==1.6.0 
 tokenizers==0.8.1.rc1
 transformers==3.0.2 
 importlib-metadata==3.4.0 

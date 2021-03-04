@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
-#get_ipython().run_line_magic('load_ext', 'autoreload')
-#get_ipython().run_line_magic('autoreload', '2')
-
-
 # In[2]:
+
+
+import random
+
+
+# In[3]:
 
 
 import torch
@@ -22,11 +21,24 @@ from azure_search.bing_utils import bing_wiki_search, get_wiki_docs
 from itertools import chain
 import numpy as np 
 import csv
+import random
 
+session_id = hex(int(random.random()*1e13))[2:]
 
+import os
+if os.path.isdir('data'):
+    print('data folder exists')
+else:
+    print('creating data folder')
+    os.mkdir('data')
+
+ugc_data_fname = f'data/ugc_{session_id}.csv' # user generated content
+mgc_data_fname = f'data/mgc_{session_id}.csv' # machine genarated content
+temp_data_fname = f'data/temp_{session_id}.csv'
+temp_fname = f'data/temp_{session_id}.txt'
 bert_dir = 'bert-base-uncased'
 evi_finder_loc = './trained_models/fever/evidence_token_identifier.pt'
-cls_loc = './trained_models/fever/evidence_classifier.pt'
+cls_loc = 'trained_models/fever/evidence_classifier.pt'
 classes = ["SUPPORTS", "REFUTES"]
 device = torch.device('cpu')
 top = 3
@@ -35,7 +47,7 @@ debug = True
 debug = False
 
 
-# In[3]:
+# In[4]:
 
 
 if debug:
@@ -65,7 +77,7 @@ else:
     cls.load_state_dict(torch.load(cls_loc, map_location=device))
 
 
-# In[4]:
+# In[5]:
 
 
 app = Flask(__name__)
@@ -176,23 +188,13 @@ def postprocess(cls_preds, exp_preds, docs_clean, urls):
 
 def get_bogus_pred():
     pred = {
-        'clses': ['123123123' for i in range(3)],
-        'evis': ['absabsabs' for i in range(3)],
+        'clses': ['REFUTE' for i in range(3)],
+        'evis': [[1 for j in range(3)] for i in range(3)],
         'links': ['www.abs.com' for i in range(3)],
         'query': 'this is not a query'
     }
     return pred
 
-
-import os
-try:
-    print('creating data folder')
-    os.mkdir('data', '0o755')
-except FileExistsError:
-    print('data folder exists')
-ugc_data_fname = 'data/ugc.csv' # user generated content
-mgc_data_fname = 'data/mgc.csv' # machine genarated content
-temp_data_fname = 'data/temp.csv'
 
 if not os.path.isfile(ugc_data_fname):
     with open(ugc_data_fname, 'w+', newline='') as fout:
@@ -214,30 +216,36 @@ def dump_quel(fname, query, urls, docs, exps, labels, mode='a+'):
             writer.writerow([query, url, list(zip(doc[0], exp)), label])
             
 
-def restore_from_temp(temp_fname):
+def restore_from_temp(temp_fname, idxs=None):
     query = None
     urls, docs, exps, labels = [], [], [], []
     with open(temp_fname, 'r', newline='') as fin:
         reader = csv.reader(fin)
-        for query, url, evidence, label in reader:
-            evidence = eval(evidence)
-            doc, exp = zip(*evidence)
-            urls.append(url)
-            docs.append([doc])
-            exps.append(exp)
-            labels.append(label)
+        for idx, (query, url, evidence, label) in enumerate(reader):
+            if idxs is None or idx in idxs:
+                evidence = eval(evidence)
+                doc, exp = zip(*evidence)
+                urls.append(url)
+                docs.append([doc])
+                exps.append(exp)
+                labels.append(label)
     return query, urls, docs, exps, labels
 
 
 @app.route('/select', methods=['GET', 'POST'])
 def select():
-    query, urls, docs, _, _ = restore_from_temp(temp_data_fname)
+    with open(temp_fname, 'r') as fin:
+        disagree_idxs = eval(str(fin.read()))
+    query, urls, docs, exps, labels = restore_from_temp(temp_data_fname, idxs=disagree_idxs)
     def _get_ugc(docs, form):
         labels = []
 #         print([i for i in form.keys()])
         evis = [[0 for w in doc[0]] for doc in docs]
-        for i in range(top):
+        bad_docs = []            
+        for i in range(len(evis)):
             labels.append(form[f"cls{i}"])
+            if labels[-1] == 'BAD_DOC':
+                continue
 #             print([form.get(f'exp{i},{j}') for j in range(3)])
 #             print(len(docs[i]))
             for j in range(len(docs[i][0])):
@@ -251,27 +259,40 @@ def select():
         dump_quel(ugc_data_fname, query, urls, docs, evis, labels)
         return render_template('thank_contrib.html')
 #     print(docs)
-    return render_template('select.html', query=query, docs=docs, urls=urls)
+    return render_template('select.html', query=query, docs=docs, 
+                           urls=urls, exps=exps, labels=labels)
 
                                         
 @app.route('/prediction/<query>', methods=['GET', 'POST'])
 def prediction(query):
     if request.method == 'POST':
 #         print(request.form['satisfy'])
-        if request.form['satisfy'] == 'Yes!':
-            query, urls, docs, exps, labels = restore_from_temp(temp_data_fname)
-            with open(mgc_data_fname, 'a+') as fout:
-                for url, doc, exp, label in zip(urls, docs, exps, labels):
-                    fout.write(f"{query}, {url}, {list(zip(doc[0], exp))}, {label}\n")
+        query, urls, docs, exps, labels = restore_from_temp(temp_data_fname)
+        disagree_idx = []
+        for i in range(top):
+            if request.form[f'agree{i}'] == 'y':
+                dump_quel(mgc_data_fname, query[i:i+1], urls[i:i+1],
+                          docs[i:i+1], exps[i:i+1], labels[i:i+1])
+            else:
+                disagree_idx.append(i)
+        if len(disagree_idx) == 0:
             return render_template('thankyou.html')
-        if request.form['satisfy'] == 'No...':
-#             print(url_for('select', query, docs))
+        else:
+            with open(temp_fname, 'w+') as fout:
+                fout.write(str(disagree_idx))
             return redirect(url_for('select'))
+#             with open(mgc_data_fname, 'a+') as fout:
+#                 for url, doc, exp, label in zip(urls, docs, exps, labels):
+#                     fout.write(f"{query}, {url}, {list(zip(doc[0], exp))}, {label}\n")
+#             return render_template('thankyou.html')
+#         if request.form['satisfy'] == 'No...':
+# #             print(url_for('select', query, docs))
+#             return redirect(url_for('select'))
     if debug:
         pred = get_bogus_pred()
         query = pred['query']
         docs_clean = [[['a' for a in range(3)]] for b in range(3) ]
-        exp_preds = [[0]*3 for i in range(3)]
+        exp_preds = [[1]*3 for i in range(3)]
         cls_preds = ['REFUTES' for i in range(3)]
         wiki_urls = pred['links']
     else:
@@ -305,8 +326,8 @@ def prediction(query):
     return render_template('predict.html', pred=pred)
 
 
-# In[8]:
+# In[7]:
 
-
-app.run(host='127.0.0.1', port=8080)
+if __name__ == "__main__":
+    app.run(host='127.0.0.1', port=8080)
 
