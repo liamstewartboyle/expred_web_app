@@ -1,11 +1,5 @@
 steps:
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'gcr.io/faxplain:$COMMIT_SHA', 'app/']
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'gcr.io/faxplain$COMMIT_SHA']
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: gcloud
-  args: ['run', 'deploy', 'faxplain', '--image', 'gcr.io/faxplaini:$COMMIT_SHA', '--region', 'europe-west2', '--platform', 'managed']
+  args: ['run', 'deploy', 'faxplain', '--region', 'europe-west2', '--platform', 'managed']
 
-images:
-- gcr.io/faxplain:$COMMIT_SHA
