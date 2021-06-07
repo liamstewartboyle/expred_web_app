@@ -1,11 +1,19 @@
 # Byte-compiled / optimized / DLL files
+<<<<<<< Updated upstream
 app/.ipynb_checkpoints/
 app/data/*.csv
 app/data/*.txt
 __pycache__/
 *.py[cod]
 *$py.class
+resources
+examples
+=======
+__pycache__/
+*.py[cod]
+*$py.class
 
+>>>>>>> Stashed changes
 # C extensions
 *.so
 
