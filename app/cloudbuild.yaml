@@ -8,6 +8,6 @@ steps:
 # Deploy container image to Cloud Run
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: gcloud
-  args: ['run', 'deploy', 'default', '--image', 'gcr.io/faxplain/default', '--region', 'europe-west1', '--platform', 'managed']
+  args: ['run', 'deploy', 'default', '--image', 'gcr.io/faxplain/cikm-demo', '--region', 'europe-west1', '--platform', 'managed']
 images:
-- gcr.io/faxplain/cikm-demo
+- gcr.io/faxplain/image-1
