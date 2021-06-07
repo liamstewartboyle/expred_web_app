@@ -1,5 +1,5 @@
 # Byte-compiled / optimized / DLL files
-<<<<<<< Updated upstream
+.venv
 app/.ipynb_checkpoints/
 app/data/*.csv
 app/data/*.txt
@@ -13,7 +13,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
->>>>>>> Stashed changes
 # C extensions
 *.so
 
