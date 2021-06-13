@@ -1,4 +1,8 @@
 # Byte-compiled / optimized / DLL files
+app/faxplain/data
+.idea
+*.zip
+*.pt
 .venv
 app/.ipynb_checkpoints/
 app/data/*.csv

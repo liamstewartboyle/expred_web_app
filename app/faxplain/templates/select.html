@@ -1,0 +1,110 @@
+<!doctype html> <html> <head>
+    <title>Your Prediction!</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" 
+integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> </head>
+<div id="maintext" style="position:absolute; width:80%; text-align:center; top:0; bottom: 0; left: 5%; right: 5%; margin: 50px auto auto;">
+  <h3 class="text-dark"> Do following documents SUPPORT or REFUTE your following statement:</h3>
+  <h1 class="text-dark mb-3"> "{{ query }}"? </h1>
+  <h3 class="text-dark mb-5"> Choose your answer and toggle up/down the <span style="background: #FFFF00">words</span> supporting your justification. </h3>
+  <form method=post style="display: grid; font-size: 22px; margin-top:16px">
+  {% for i in range( docs|length ) %}
+    <span style='display: inline; margin-bottom:8px'>
+      {% for j in range( docs[i][0]|length ) %}
+        <input type='checkbox' id="exp{{ i }},{{ j }}" name="exp{{ i }},{{ j }}" value='{{ j }}' style="display: none" class="{{ exps[i][j] }}">
+          <label for="exp{{ i }},{{ j }}" style="color: black; background: white; float:left;">
+          {{ docs[i][0][j] }}&nbsp;
+        </label>
+      {% endfor %}
+    </span>
+  <span style="display: inline; font-size: 22px; margin-bottom:30px">
+  <h3 for="cls" class="text-dark" style="float: left; font-size: 28px; margin-right: 14px">This document</h3>
+  <select id="cls{{ i }}" name="cls{{ i }}" class='{{ labels[i] }}' style="float: left;">
+    <option value="SUPPORTS" id='cls{{i}}_SUPPORTS'>supports</option>
+    <option value="REFUTES" id='cls{{i}}_REFUTES'>refutes</option>
+    <option value="IRRELEVANT">is irrelevant with</option>
+    <option value='BAD_DOC'>is misleading regarding</option>
+  </select>
+  <h3 for="cls" class="text-dark" style="float: left; font-size: 28px; margin-right: 14px"> my claim.</h3>
+  </span>
+  {% endfor %}
+  <span><input type="submit" value='Submit'></span>
+  </form>
+  </span>
+<a href="{{ url_for('main_page') }}"><button class="button mt-3">Try another statement?</button></a>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.slim.min.js"></script>
+<script type="text/javascript">
+    var mouseDown = false;
+    var currentLabelId = -1
+    function toggle_background(element) {
+        var cbid = element.htmlFor
+        var cb = document.getElementById(cbid)
+        if (cb.checked) {
+            element.style.background = '#FFFF00'
+        } else {
+            element.style.background = 'white'
+        }
+    }
+
+    function customToggleCheckBox(l){
+        var cbid = l.htmlFor;
+        currentLabelId = cbid
+        var cb = document.getElementById(cbid);
+        cb.checked = !cb.checked;
+    }
+
+    $("label").on('click', function(event){
+        event.preventDefault();
+    });
+
+    $("label").on('mousedown touchstart', function(event) {
+        event.preventDefault();
+        mouseDown = true;
+        customToggleCheckBox(this)
+        toggle_background(this)
+    });
+
+    $("label").on('mousemove touchmove', function(event) {
+        event.preventDefault();
+        var cbid = this.htmlFor;
+        if (currentLabelId != cbid && mouseDown) {
+            customToggleCheckBox(this)
+            toggle_background(this)
+        }
+    });
+    $(window.document).on('mouseup touchend', function(event) {
+        // Capture this event anywhere in the document,
+        // since the mouse may leave our element while
+        // mouse is down and then the 'up' event will
+        // not fire within the element.
+        mouseDown = false;
+        currentLabelId = -1
+    });
+
+    window.onload = function() {
+        var all_ps = document.getElementsByTagName("select");
+        for (var i=0, max=all_ps.length; i < max; i++) {
+            var cls_select = document.getElementById('cls' + parseInt(i));
+            var selected = cls_select.className;
+            cls_select.value = selected;
+        }
+
+        var all_labels = document.getElementsByTagName("label");
+        for (var i=0, max=all_labels.length; i < max; i++) {
+            var element = all_labels[i];
+            var cbid = element.htmlFor;
+            var cb = document.getElementById(cbid);
+            if (cb.className == "1" || cb.className == '1.0') {
+                cb.checked = true;
+            }
+            if (cb.checked) {
+                element.style.background = '#FFFF00'
+            } else {
+                element.style.background = 'white'
+            }
+        }
+    };
+</script>
+</body>
+</html>

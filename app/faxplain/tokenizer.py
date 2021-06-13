@@ -2,7 +2,6 @@ from itertools import chain
 from typing import List, Dict, Tuple
 
 import os
-import torch
 from transformers import BertTokenizer, logger
 
 # from expred.models.pipeline.bert_pipeline import bert_intern_doc

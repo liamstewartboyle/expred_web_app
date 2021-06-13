@@ -1,12 +1,8 @@
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 <!doctype html> <html> 
 <head>
     <title>Your Prediction!</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" 
-integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> 
+integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <style>
       .table-element {
         padding: 4px;
@@ -14,12 +10,16 @@ integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6J
     </style>
     <!-- <link rel='stylesheet' href='/templates/pred.css'> -->
 </head>
-<body style="background-color:white"> <div id="maintext" 
+<body style="background-color:white"> <div id="maintext"
 style="position:absolute; margin:auto; width:80%; text-align:center; top:0; bottom: 0; left: 10%; right: 10%; margin-top:50px">
   <!-- <h1 class="text-dark mb-5"> Verification Results: </h1> -->
-  <h3 class="text-dark"> Your claim </h3>
-  <h1 class='text-dark mb-3'> "{{ pred.query }}"</h1>
-  <h3 class='text-dark mb-5'> was verified by following documents we found from the Wikipedia, do you agree with them?</h3>
+  <h3 class="text-dark">Your claim</h3>
+  <h1 class='text-dark mb-3'>"{{ pred.query }}"</h1>
+  <h3 class='text-dark mb-5'>
+    <div>is either <span style='color:green'>SUPPORTED</span> or <span style="color:red">REFUTED</span> by following documents from <a href="wikipedia.org">wikipedia.org</a>.</div>
+    <div>Evidence supporting the justification is <span style="background-color: #FFFF00">marked with bright yelow</span>.</div>
+    <div>Do you agree with them?</div>
+  </h3>
   <form id='feedback' method=post>
   <table class="table-bordered text-dark" style=" margin-bottom: 30px; width:100%; font-size: large">
   <tr>
@@ -34,7 +34,7 @@ style="position:absolute; margin:auto; width:80%; text-align:center; top:0; bott
         {{ pred.evis[i]|safe|escape }} 
       </span>
     </td> 
-    <td class="table-element"> {{ pred.links[i]|safe|escape }} </td> 
+    <td class="table-element"> <a href='https://en.wikipedia.org/{{ pred.links[i] }}'>{{ pred.links[i]|safe|escape }}</a> </td>
     <td> 
       <span style="display:grid;">
         <span style='display: inline;margin-top: 7px;'>
@@ -58,22 +58,16 @@ style="position:absolute; margin:auto; width:80%; text-align:center; top:0; bott
 <input type='submit', name='submit', value='Next step'>
 </form>
 <a href="{{ url_for('main_page') }}"><button class="button mt-3">Go back to the main page</button></a>
-=======
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-<!doctype html> <html> <head>
+
+<!-- <!doctype html> <html> <head>
     <title>Your Prediction!</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" 
 integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> </head>
 <body style="background-color:black"> <div id="maintext" 
 style="position:absolute; margin:auto; width:700px; height:300px; text-align:center; top:0; bottom: 0; left: 0; right: 0;">
-  <h1 class="text-light mb-5"> Verification </h1>
-  <p class="text-light"> Your statement was verified as follows: </p>
-  <table class="table-bordered text-light" style="width:100%">
+  <h1 class="text-dark mb-5"> Verification </h1>
+  <p class="text-dark"> Your statement was verified as follows: </p>
+  <table class="table-bordered text-dark" style="width:100%">
   <tr>
     <th>Statement</th> <th>Verification</th>  <th>Evidence</th> <th> Wikipage </th>
   </tr>
@@ -87,22 +81,13 @@ style="position:absolute; margin:auto; width:700px; height:300px; text-align:cen
     <td> {{ query }} </td> <td>{{ pred.cls2 }}</td> <td>{{ pred.evi2 }} </td> <td> {{ pred.link2 }} </td>
   </tr>
   </table> 
-<h3 class="text-light mb-2"> Do you agree with this prediction? </h3>
+<h3 class="text-dark mb-2"> Do you agree with this prediction? </h3>
   
 <form mehtod='post'>
 <input type='submit', name='eval', value='Yes!'> <input type='submit', name='eval', value='No!'>
 </form>
 <a href="{{ url_for('main_page') }}"><button class="button mt-3">Try other statement?</button></a>
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+ -->
 </div>
 </body>
 </html>
