@@ -44,20 +44,18 @@ words of your query. The annotation contributed by the user are appended to the 
 
 现在用的是一个monkey patch，用以规避app engine的10分钟build timeout
 
-方法是：先把程序部署到gcloud run上，然后在app engine里面deploy一个静态页面，重定向到run的那个实例，因为在www demo paper里面写的那个url是[https://faxplain.appspot.com/](https://faxplain.appspot.com/) ，这是一个app engine分配的url。这样有两个问题：
-
-1. 可能产生双重费用
-2. gcloud run的url不固定,需要每次都手动更新
+方法是：先把程序部署到gcloud run上，然后在app engine里面deploy一个静态页面，重定向到run的那个实例，因为在www demo paper里面写的那个url是[https://faxplain.appspot.com/](https://faxplain.appspot.com/) ，这是一个app engine分配的url。
 
 ### gcloud run的使用方法：
 
-用以下命令来把当前目录打包成docker镜像，并上传到gcloud run上进行部署。需要mem：4GB（这个是从run的service里面选的，一个service相当于一个虚拟机）。运行下面这个命令之后会有prompt问service名称，写“default”，区域选12，public available
+首先切换目录到app路径下，然后在这个下面执行以下命令，该命令使用cloudbuild.yaml文件种列出的命令一条条打包/上传/部署docker container到gcloud run上：
 
-```gcloud beta run deploy --source . --project faxplain --platform managed```
+```gcloud commit --config cloudbuild.yaml .```
 
-在当前目录中应该有一个名为```Procfile```的文件，这个文件是docker image要执行的命令，在这里用```web:```开头
-
-```web: FLASK_APP=expred_webapp.py python3 -m flask run --host=0.0.0.0 --port=8080```
+~~用以下命令来把当前目录打包成docker镜像，并上传到gcloud run上进行部署。需要mem：4GB（这个是从run的service里面选的，一个service相当于一个虚拟机）。运行下面这个命令之后会有prompt问service名称，写“default”，区域选12，public available~~
+~~```gcloud commit beta run deploy --source . --project faxplain --platform managed```~~
+~~在当前目录中应该有一个名为```Procfile```的文件，这个文件是docker image要执行的命令，在这里用```web:```开头~~
+~~```web: FLASK_APP=expred_webapp.py python3 -m flask run --host=0.0.0.0 --port=8080```~~
 
 ### 用gae进行重定向：
 
@@ -65,11 +63,18 @@ words of your query. The annotation contributed by the user are appended to the 
 
 ```gcloud app deploy app.yaml --project faxplain```
 
-## 需要做的：
+## 收集数据：
 
-2. 看怎么收集数据(应该是和storage有关)
-3. Fixate以上所有这些操作
-4. 整理repo，留下
+资料源自[这里](https://cloud.google.com/sdk/gcloud/reference/compute/copy-files)
+
+使用类似如下命令：
+
+```gcloud compute copy-files example-instance:~/REMOTE-DIR  ~/LOCAL-DIR --zone=us-central1-a```
+
+而云端镜像存在[这里](https://console.cloud.google.com/gcr/images/faxplain?project=faxplain&folder&organizationId)
+
+
+```gsutil rsync data gs://mybucket/data```
 5. 设置ci过程
 6. 从本地进行gcloud deployment操作
 7. 固定gcloud run的网址，最好是不用gae转发

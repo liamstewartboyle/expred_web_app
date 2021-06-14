@@ -4,7 +4,9 @@ import os
 from debug import get_bogus_pred
 from expred_utils import mark_evidence, merge_subtoken_exp_preds, adapt_exp_pred, preprocess
 from faxplain_utils import restore_from_temp, dump_quel
-from google_search import google_wiki_search
+from search import google_rest_api_search as wiki_search
+# from search import bing_wiki_search as wiki_search
+# from search import google_wiki_search as wiki_search
 from tokenizer import BertTokenizerWithMapping
 from models.mlp import BertMTL, BertClassifier
 from models.params import MTLParams
@@ -131,12 +133,14 @@ def select():
 
 @app.route('/prediction/<query>', methods=['GET', 'POST'])
 def prediction(query):
+    import sys
+    sys.setdefaultencoding('utf8')
     if request.method == 'POST':
         query, urls, docs, exps, labels = restore_from_temp(temp_data_fname)
         disagree_idx = []
         for i in range(top):
             if request.form[f'agree{i}'] == 'y':
-                dump_quel(mgc_data_fname, query[i:i + 1], urls[i:i + 1],
+                dump_quel(mgc_data_fname, query, urls[i:i + 1],
                           docs[i:i + 1], exps[i:i + 1], labels[i:i + 1])
             else:
                 disagree_idx.append(i)
@@ -173,7 +177,9 @@ def prediction(query):
             return aux_preds, cls_preds, hard_exp_preds, docs_clean
 
         # wiki_urls = bing_wiki_search(query)[:top]
-        wiki_urls = google_wiki_search(query, top)[:top]
+        wiki_urls = wiki_search(query, top)[:top]
+        if not wiki_urls:
+            return render_template('no_results.html')
         orig_docs = [get_wiki_docs(url) for url in wiki_urls]
         (
             tokenized_q,
