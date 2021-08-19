@@ -18,4 +18,4 @@ ENV LANGUAGE en_US.UTF-8
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
-CMD exec gunicorn -b $HOST:$PORT -w 1 --thread 8 --timeout 0 faxplain:app
+CMD exec gunicorn3 -b $HOST:$PORT -w 1 --thread 8 --timeout 0 faxplain:app

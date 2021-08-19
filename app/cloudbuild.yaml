@@ -1,13 +1,14 @@
 steps:
 # Build the container image
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'gcr.io/faxplain/cikm-demo', '.']
+- name: 'eu.gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'eu.gcr.io/faxplain/cikm-demo', '.']
 # Push the container image to Container Registry
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'gcr.io/faxplain/cikm-demo']
+- name: 'eu.gcr.io/cloud-builders/docker'
+  args: ['push', 'eu.gcr.io/faxplain/cikm-demo']
 # Deploy container image to Cloud Run
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+- name: 'eu.gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: gcloud
-  args: ['run', 'deploy', 'default', '--image', 'gcr.io/faxplain/cikm-demo', '--region', 'europe-west1', '--platform', 'managed']
+  args: ['run', 'deploy', 'default', '--image', 'eu.gcr.io/faxplain/cikm-demo', '--region', 'europe-west1', '--platform', 'managed']
+timeout: 60000s
 images:
-- gcr.io/faxplain/cikm-demo
+- eu.gcr.io/faxplain/cikm-demo

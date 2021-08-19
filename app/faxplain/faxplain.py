@@ -133,8 +133,6 @@ def select():
 
 @app.route('/prediction/<query>', methods=['GET', 'POST'])
 def prediction(query):
-    import sys
-    sys.setdefaultencoding('utf8')
     if request.method == 'POST':
         query, urls, docs, exps, labels = restore_from_temp(temp_data_fname)
         disagree_idx = []
