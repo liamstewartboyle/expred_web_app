@@ -1,0 +1,123 @@
+<!doctype html> <html> <head>
+    <title>Your Prediction!</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" 
+integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> 
+    <link rel='stylesheet' href='pred.css'>
+</head>
+<div id="maintext" style="position:absolute; width:80%; text-align:center; top:0; bottom: 0; left: 5%; right: 5%; margin: 50px auto auto;">
+  <h3 class="text-dark"> Do following documents SUPPORT or REFUTE your following statement:</h3>
+  <h1 class="text-dark mb-3"> "microsoft is a chinese company"? </h1>
+  <h3 class="text-dark mb-5"> Choose your answer and toggle up/down the <span style="background: #FFFF00">words</span> supporting your justification. </h3>
+  <h3 class='text-dark mb-5'> You can require more sentences for each document by clicking "show more content...", if the current snippet does not suffice</h3>
+  <form method=post style="display: grid; font-size: 22px; margin-top:16px">
+    <span style='text-align:left;'>
+    since the introduction of economic reforms in 1978, china has become one of the world's fastest-growing major economies . as of 2016, it was the world's second-largest economy by nominal gdp and largest by purchasing power parity (ppp) . china was also the world's largest exporter and second-largest importer of goods . china is a member of numerous formal and informal multilateral organizations, including the wto, apec, brics, the shanghai cooperation organization (sco), the bcim and the g-20 . <span class='evidence'>a company incorporated in any of china's special administrative regions is not considered to be incorporated in china . see the corresponding list for companies incorporated in china's special administrative regions .</span> for further information on the types of business entities in this country and their abbreviations, see "business entities in china" . largest firms this list shows firms in the fortune global 500, which ranks firms by total revenues reported before 31 march 2018 . only the top five firms (if available) are included as a sample . notable firms this list includes notable companies with primary headquarters located in the country . the industry and sector follow the industry classification benchmark taxonomy . organizations which have ceased operations are included and noted as defunct . <span class='evidence'>see also list of companies of the republic of china (taiwan) list of companies of hong kong list of companies of macau list of largest chinese companies references .</span> <a href='#'>show more content...</a>
+    </span>
+    <span style="display: inline; font-size: 22px; margin-bottom:30px">
+        <h3 for="cls" class="text-dark" style="float: left; font-size: 28px; margin-right: 14px">The document above</h3>
+        <select id="cls{{ i }}" name="cls{{ i }}" class='{{ labels[i] }}' style="float: left;">
+            <option value="SUPPORTS" id='cls{{i}}_SUPPORTS'>supports</option>
+            <option value="REFUTES" id='cls{{i}}_REFUTES'>refutes</option>
+            <option value="IRRELEVANT">is irrelevant with</option>
+            <option value='BAD_DOC'>is misleading regarding</option>
+        </select>
+        <h3 for="cls" class="text-dark" style="float: left; font-size: 28px; margin-right: 14px"> my claim.</h3>
+    </span>
+
+    <span style='text-align:left;'>
+    criticism of microsoft has followed various aspects of its products and business practices . issues with ease of use, <span class='evidence'>robustness</span>, and <span class='evidence'>security of the company's software are common targets for</span> critics. in the 2000s, a number of malware mishaps targeted security flaws in windows and other products . microsoft was also accused of locking vendors and consumers in to their products, and of not following or complying with existing 
+                                   <span style="text-align: center;"><h3>• • •</h3></span>
+    manager for c++ development aaron contorer stated: the windows api is so broad, so deep, and so functional that most independent software vendors would be crazy not to use it . and it is so deeply embedded in the source code of many windows apps that there is a huge switching cost to using a different operating system instead... it is this switching cost that has given customers the patience to stick with windows through all our mistakes, our buggy drivers, our high tco (total cost of ownership), our lack of a sexy vision at times, and many other difficulties. <a href='#'>show more content...</a>
+    </span>
+    <span style="display: inline; font-size: 22px; margin-bottom:30px">
+        <h3 for="cls" class="text-dark" style="float: left; font-size: 28px; margin-right: 14px">The document above</h3>
+        <select id="cls{{ i }}" name="cls{{ i }}" class='{{ labels[i] }}' style="float: left;">
+            <option value="SUPPORTS" id='cls{{i}}_SUPPORTS'>supports</option>
+            <option value="REFUTES" id='cls{{i}}_REFUTES'>refutes</option>
+            <option value="IRRELEVANT">is irrelevant with</option>
+            <option value='BAD_DOC'>is misleading regarding</option>
+        </select>
+        <h3 for="cls" class="text-dark" style="float: left; font-size: 28px; margin-right: 14px"> my claim.</h3>
+    </span>
+
+  <span><input type="submit" value='Submit'></span>
+  </form>
+  </span>
+<a href="{{ url_for('main_page') }}"><button class="button mt-3">Try another statement?</button></a>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.slim.min.js"></script>
+<script type="text/javascript">
+    var mouseDown = false;
+    var currentLabelId = -1
+    function toggle_background(element) {
+        var cbid = element.htmlFor
+        var cb = document.getElementById(cbid)
+        if (cb.checked) {
+            element.style.background = '#FFFF00'
+        } else {
+            element.style.background = 'white'
+        }
+    }
+
+    function customToggleCheckBox(l){
+        var cbid = l.htmlFor;
+        currentLabelId = cbid
+        var cb = document.getElementById(cbid);
+        cb.checked = !cb.checked;
+    }
+
+    $("label").on('click', function(event){
+        event.preventDefault();
+    });
+
+    $("label").on('mousedown touchstart', function(event) {
+        event.preventDefault();
+        mouseDown = true;
+        customToggleCheckBox(this)
+        toggle_background(this)
+    });
+
+    $("label").on('mousemove touchmove', function(event) {
+        event.preventDefault();
+        var cbid = this.htmlFor;
+        if (currentLabelId != cbid && mouseDown) {
+            customToggleCheckBox(this)
+            toggle_background(this)
+        }
+    });
+    $(window.document).on('mouseup touchend', function(event) {
+        // Capture this event anywhere in the document,
+        // since the mouse may leave our element while
+        // mouse is down and then the 'up' event will
+        // not fire within the element.
+        mouseDown = false;
+        currentLabelId = -1
+    });
+
+    window.onload = function() {
+        var all_ps = document.getElementsByTagName("select");
+        for (var i=0, max=all_ps.length; i < max; i++) {
+            var cls_select = document.getElementById('cls' + parseInt(i));
+            var selected = cls_select.className;
+            cls_select.value = selected;
+        }
+
+        var all_labels = document.getElementsByTagName("label");
+        for (var i=0, max=all_labels.length; i < max; i++) {
+            var element = all_labels[i];
+            var cbid = element.htmlFor;
+            var cb = document.getElementById(cbid);
+            if (cb.className == "1" || cb.className == '1.0') {
+                cb.checked = true;
+            }
+            if (cb.checked) {
+                element.style.background = '#FFFF00'
+            } else {
+                element.style.background = 'white'
+            }
+        }
+    };
+</script>
+</body>
+</html>

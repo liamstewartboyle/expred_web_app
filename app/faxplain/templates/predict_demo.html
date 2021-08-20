@@ -1,0 +1,134 @@
+<!doctype html> <html> 
+<head>
+    <title>Your Prediction!</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" 
+integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <style>
+      .table-element {
+        padding: 4px;
+      }
+    </style>
+    <link rel='stylesheet' href='pred.css'>
+</head>
+<body style="background-color:white"> <div id="maintext"
+style="position:absolute; margin:auto; width:80%; text-align:center; top:0; bottom: 0; left: 10%; right: 10%; margin-top:50px">
+  <!-- <h1 class="text-dark mb-5"> Verification Results: </h1> -->
+  <h3 class="text-dark">Your claim</h3>
+  <h1 class='text-dark mb-3'>"microsoft is a chinese company"</h1>
+  <h3 class='text-dark mb-5'>
+    <div>is either <span style='color:green'>SUPPORTED</span> or <span style="color:red">REFUTED</span> by following documents from <a href="en.wikipedia.org">English Wikipedia</a>.</div>
+    <div style="margin-top: 10px">Evidence supporting the justification is <span style="background-color: #FFFF00">marked bright yellow</span>.</div>
+    <div style="margin-top: 10px">Do you agree with them?</div>
+  </h3>
+  <form id='feedback' method=post>
+  <table class="table-bordered text-dark" style=" margin-bottom: 30px; width:100%; font-size: large">
+  <tr>
+    <!-- <th class="table-element">Statement</th> --> <th class="table-element">Verification</th>  <th class="table-element">Evidence</th> <th class="table-element"> Wikipage </th> <th> Agree? </th>
+  </tr>
+  <tr>
+    <td style='color:green'>SUPPORTS</td>
+    <td>
+      <span style="text-align: left;float: left;margin-left: 7px;">
+        since the introduction of ... <span class='evidence'>a company incorporated in any of china's special administrative regions is not considered to be incorporated in china . see the corresponding list for companies incorporated in china's special administrative regions .</span> for further information on ... <span class='evidence'>see also list of companies of the republic of china (taiwan) list of companies of hong kong list of companies of macau list of largest chinese companies references.</span>
+      </span>
+    </td> 
+    <td class="table-element"> <a href='https://en.wikipedia.org/wiki/List_of_companies_of_China'>Source</a> </td>
+    <td> 
+      <span style="display:grid;">
+        <span style='display: inline;margin-top: 7px;'>
+          <input type="radio" id='agree{{ i }}y' name="agree{{ i }}" value='y' checked style="float: left;margin-right: 5px;margin-top: 6px;margin-left: 7px;">
+          <label for="agree{{ i }}y" style="float: left;">Yes</label>
+        </span>
+        <span style="display: inline">
+          <input type="radio" id='agree{{ i }}n' name="agree{{ i }}" value="n" style="float: left;margin-right: 5px;margin-top: 6px;margin-left: 7px;">
+          <label for="agree{{ i }}n" style="float: left;">No</label>
+        </span>
+      </span>
+    </td>
+  </tr>
+
+  <tr>
+    <td style='color:red'>REFUTES</td>
+    <td>
+      <span style="text-align: left;float: left;margin-left: 7px;">
+        criticism of microsoft has ... <span class='evidence'>security</div> of <span class='evidence'> the companiy's software</span > are common targets for ...
+      </span>
+    </td> 
+    <td class="table-element"> <a href='https://en.wikipedia.org/wiki/Criticism_of_Microsoft'>Source</a> </td>
+    <td> 
+      <span style="display:grid;">
+        <span style='display: inline;margin-top: 7px;'>
+          <input type="radio" id='agree{{ i }}y' name="agree{{ i }}" value='y' checked style="float: left;margin-right: 5px;margin-top: 6px;margin-left: 7px;">
+          <label for="agree{{ i }}y" style="float: left;">Yes</label>
+        </span>
+        <span style="display: inline">
+          <input type="radio" id='agree{{ i }}n' name="agree{{ i }}" value="n" style="float: left;margin-right: 5px;margin-top: 6px;margin-left: 7px;">
+          <label for="agree{{ i }}n" style="float: left;">No</label>
+        </span>
+      </span>
+    </td>
+  </tr>
+
+  <tr>
+    <td style='color:red'>REFUTES</td>
+    <td>
+      <span style="text-align: left;float: left;margin-left: 7px;">
+        <span class='evidence'>microsoft corporation (, ) is an american multinational technology company with headquarters in redmond, washington .</span> it develops, manufactures, licenses, ...
+      </span>
+    </td> 
+    <td class="table-element"> <a href='https://en.wikipedia.org/wiki/Microsoft'>Source</a> </td>
+    <td> 
+      <span style="display:grid;">
+        <span style='display: inline;margin-top: 7px;'>
+          <input type="radio" id='agree{{ i }}y' name="agree{{ i }}" value='y' checked style="float: left;margin-right: 5px;margin-top: 6px;margin-left: 7px;">
+          <label for="agree{{ i }}y" style="float: left;">Yes</label>
+        </span>
+        <span style="display: inline">
+          <input type="radio" id='agree{{ i }}n' name="agree{{ i }}" value="n" style="float: left;margin-right: 5px;margin-top: 6px;margin-left: 7px;">
+          <label for="agree{{ i }}n" style="float: left;">No</label>
+        </span>
+      </span>
+    </td>
+  </tr>
+    <!-- <td> - </td> <td>{{ pred.clses[1]|safe|escape }}</td>  <td>{{ pred.evis[1]|safe|escape }} </td> <td> {{ pred.links[1]|safe|escape }} </td>
+    </tr>
+    <td> - </td> <td>{{ pred.clses[1]|safe|escape }}</td>  <td>{{ pred.evis[1]|safe|escape }} </td> <td> {{ pred.links[2]|safe|escape }} </td>
+    </tr> -->
+  </table> 
+<!-- <h3 class="text-dark mb-2"> Do you agree with this prediction? </h3> -->
+<input type='submit', name='submit', value='Next step'>
+</form>
+<a href="{{ url_for('main_page') }}"><button class="button mt-3">Go back to the main page</button></a>
+
+<!-- <!doctype html> <html> <head>
+    <title>Your Prediction!</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" 
+integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> </head>
+<body style="background-color:black"> <div id="maintext" 
+style="position:absolute; margin:auto; width:700px; height:300px; text-align:center; top:0; bottom: 0; left: 0; right: 0;">
+  <h1 class="text-dark mb-5"> Verification </h1>
+  <p class="text-dark"> Your statement was verified as follows: </p>
+  <table class="table-bordered text-dark" style="width:100%">
+  <tr>
+    <th>Statement</th> <th>Verification</th>  <th>Evidence</th> <th> Wikipage </th>
+  </tr>
+  <tr>
+    <td> {{ query }} </td> <td>{{ pred.cls0 }}</td>  <td>{{ pred.evi0 }} </td> <td> {{ pred.link0 }} </td>
+  </tr>
+  <tr>
+    <td> {{ query }} </td> <td>{{ pred.cls1 }}</td> <td>{{ pred.evi1 }} </td> <td> {{ pred.link1 }} </td>
+  </tr> 
+  <tr>
+    <td> {{ query }} </td> <td>{{ pred.cls2 }}</td> <td>{{ pred.evi2 }} </td> <td> {{ pred.link2 }} </td>
+  </tr>
+  </table> 
+<h3 class="text-dark mb-2"> Do you agree with this prediction? </h3>
+  
+<form mehtod='post'>
+<input type='submit', name='eval', value='Yes!'> <input type='submit', name='eval', value='No!'>
+</form>
+<a href="{{ url_for('main_page') }}"><button class="button mt-3">Try other statement?</button></a>
+ -->
+</div>
+</body>
+</html>
