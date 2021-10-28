@@ -1,18 +1,36 @@
 <!doctype html> <html> <head>
     <title>Verify it!</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" 
-integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> </head> <body style="background-color:white"> <div id="maintext" 
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="{{ url_for('static',filename='styles/index.css') }}">
+</head> <body style="background-color:white">
+    <div id="maintext"
 style="position:absolute; margin:auto; width:700px; height:200px; text-align:center; top:0; bottom: 0; left: 0; right: 0;">
   <h1 class="text-dark mb-2"> Input your statement to be verified! </h1>
   <h4 class="text-dark mb-5">(For example: The Ultimate answer of Universe is 42)</h4>
   <form method=post>
      <p class="text-dark">
         <label for='Statement'>
-        <input type=text name=query>
-        <input type=submit value="Verifiy!">
+            <input type=text name=query>
+            <input type=submit value="Verify!">
+        <div>
+            <label for="cod" style="margin-right: 5px;">Count of documents:</label>
+            <div class="range"  style="--step:1; --min:1; --max:5; margin-left: 5px;">
+                <input type="range" name=cod min=1 max=5 value=3 step=1 class="slider" id="cod" list="steplist">
+                <datalist id="steplist" style="--list-length: 5;">
+                <option>1</option>
+                <option>2</option>
+                <option>3</option>
+                <option>4</option>
+                <option>5</option>
+            </datalist>
+            </div>
+        </div>
+  </form>
+
 
 <!-- integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> </head> <body style="background-color:black"> <div id="maintext" 
-style="position:absolute; margin:auto; width:700px; height:200px; text-align:center; top:0; bottom: 0; left: 0; right: 0;">
+style="position:absolute; margin:auto; width:700px; height:200px; text-align:center; ndocs:0; bottom: 0; left: 0; right: 0;">
   <h1 class="text-light mb-2"> Input your statement to be verified! </h1>
   <h4 class="text-light mb-5">(For example: The Ultimate answer of the Universe is 42)</h4>
   <form method=post>
@@ -22,5 +40,5 @@ style="position:absolute; margin:auto; width:700px; height:200px; text-align:cen
         <input type=submit value=Verifiy!> -->
 
      </p>
-  </form> </div> </body>
+  </form> </form> </body>
 </html>

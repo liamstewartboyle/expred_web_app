@@ -42,7 +42,7 @@ def google_rest_api_search(raw_query: str, top=10):
     url = f'https://www.googleapis.com/customsearch/v1?key={api_key}&' \
           f'q={query}&' \
           f'cx={cx}&' \
-          f'num={top * 3}'
+          f'num={top}'
     response = requests.get(url, headers=headers)
     res = json.loads(response.text)
     if 'items' not in res:
