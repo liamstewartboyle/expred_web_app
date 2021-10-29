@@ -1,0 +1,69 @@
+#maintext {
+    position: absolute;
+    width: 80%;
+    text-align: center;
+    top: 0;
+    bottom: 0;
+    left: 5%;
+    right: 5%;
+    margin: 50px auto auto;
+    display:grid;
+}
+
+form {
+    display: grid;
+    font-size: 22px;
+    margin-top: 16px;
+}
+
+.annotations {
+    display: inline;
+    margin-bottom: 8px;
+}
+
+.word-ann {
+    display: none;
+}
+
+.classes {
+    float: left;
+}
+
+.text-dark {
+    float: left;
+    font-size: 28px;
+    margin-right: 14px;
+}
+
+.exp-label {
+    color: black;
+    background: white;
+    float: left;
+}
+
+div.text-container {
+    margin: 0 auto;
+    width: 75%;
+}
+
+.hideContent {
+    overflow: hidden;
+    line-height: 1em;
+    height: 20.2em;
+}
+
+.showContent {
+    line-height: 1em;
+    height: auto;
+}
+
+h1 {
+    font-size: 24px;
+}
+p {
+    padding: 10px 0;
+}
+.show-more {
+    padding: 10px 0;
+    text-align: left;
+}

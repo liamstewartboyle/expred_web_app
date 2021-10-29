@@ -11,12 +11,11 @@ def preprocess(query, docs, tokenizer, top, max_sentence):
     query_slice = query_slices[0]
     docs_split = [[list(chain.from_iterable([s.split() + ['.'] for s in d.split('.')]))]
                   for d in docs]
-    docs_trunc = [doc[:max_sentence] for doc in docs_split]
-    tokenized_docs, docs_slice = tokenizer.encode_docs(docs_trunc)
+    tokenized_docs, docs_slice = tokenizer.encode_docs([doc[:max_sentence] for doc in docs_split])
     tokenized_docs = [list(chain.from_iterable(tokenized_docs[i])) for i in range(top)]
     docs_slice = [list(chain.from_iterable(docs_slice[i]))
                                   for i in range(top)]
-    return tokenized_q, query_slice, tokenized_docs, docs_slice, docs_split, docs_trunc
+    return tokenized_q, query_slice, tokenized_docs, docs_slice, docs_split
 
 
 def mark_evidence(queries, docs, hard_preds, tokenizer, max_length, wildcard='.'):

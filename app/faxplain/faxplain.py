@@ -1,3 +1,5 @@
+import pickle
+
 import torch
 import os
 
@@ -27,14 +29,14 @@ else:
 
 ugc_data_fname = f'data/ugc_{session_id}.csv'  # user generated content
 mgc_data_fname = f'data/mgc_{session_id}.csv'  # machine genarated content
-temp_data_fname = f'data/temp_{session_id}.csv'
+temp_data_fname = f'data/temp_{session_id}.pkl'
 temp_fname = f'data/temp_{session_id}.txt'
 bert_dir = 'bert-base-uncased'
 evi_finder_loc = './trained_models/fever/evidence_token_identifier.pt'
 cls_loc = 'trained_models/fever/evidence_classifier.pt'
 classes = ["SUPPORTS", "REFUTES"]
 device = torch.device('cpu')
-ndocs = 3
+default_ndocs = 3
 max_sentence = 30
 debug = True
 debug = False
@@ -78,8 +80,8 @@ def main_page():
     if request.method == 'POST':
         query = request.form['query']
         query = clean(query)
-        global ndocs
-        ndocs = int(request.form['cod'])
+        global default_ndocs
+        default_ndocs = int(request.form['cod'])
         return redirect(url_for('prediction', query=query))
     return render_template('index.html')
 
@@ -110,9 +112,11 @@ if not os.path.isfile(mgc_data_fname):
 @app.route('/prediction/<query>', methods=['GET', 'POST'])
 def prediction(query):
     if request.method == 'POST':
-        query, urls, docs, exps, labels = restore_from_temp(temp_data_fname)
+        with open(temp_data_fname, 'rb') as fin:
+            query, urls, docs, exps, labels = pickle.load(fin)
+
         disagree_idx = []
-        for i in range(ndocs):
+        for i in range(default_ndocs):
             if request.form[f'agree{i}'] == 'y':
                 dump_quel(mgc_data_fname, query, urls[i:i + 1],
                           docs[i:i + 1], exps[i:i + 1], labels[i:i + 1])
@@ -137,12 +141,12 @@ def prediction(query):
             with torch.no_grad():
                 exp.eval()
 
-                aux_preds, exp_preds, att_masks = exp(queries, [i for i in range(ndocs)], docs)
+                aux_preds, exp_preds, att_masks = exp(queries, [i for i in range(default_ndocs)], docs)
 
                 hard_exp_preds = torch.round(exp_preds)
                 queries, docs = mark_evidence(queries, docs, hard_exp_preds, tokenizer, max_length)
 
-                cls_preds = cls(queries, [i for i in range(ndocs)], docs)
+                cls_preds = cls(queries, [i for i in range(default_ndocs)], docs)
 
                 aux_preds = [classes[torch.argmax(p)] for p in aux_preds]
                 cls_preds = [classes[torch.argmax(p)] for p in cls_preds]
@@ -150,8 +154,8 @@ def prediction(query):
                 hard_exp_preds = merge_subtoken_exp_preds(hard_exp_preds, docs_slice)
             return aux_preds, cls_preds, hard_exp_preds#, docs_clean
 
-        # wiki_urls = bing_wiki_search(query)[:ndocs]
-        wiki_urls = wiki_search(query, ndocs)[:ndocs]
+        # wiki_urls = bing_wiki_search(query)[:default_ndocs]
+        wiki_urls = wiki_search(query, default_ndocs)[:default_ndocs]
         if not wiki_urls:
             return render_template('no_results.html')
         orig_docs = [get_wiki_docs(url) for url in wiki_urls]
@@ -160,16 +164,17 @@ def prediction(query):
             query_slice,
             tokenized_docs,
             docs_slice,
-            docs_split,
-            docs_trunc
-        ) = preprocess(query, orig_docs, tokenizer, ndocs, max_sentence)
-        queries = [torch.tensor(tokenized_query[0], dtype=torch.long) for i in range(ndocs)]
+            docs_split
+        ) = preprocess(query, orig_docs, tokenizer, default_ndocs, max_sentence)
+        queries = [torch.tensor(tokenized_query[0], dtype=torch.long) for i in range(default_ndocs)]
         docs = [torch.tensor(s, dtype=torch.long) for s in tokenized_docs]
         aux_preds, cls_preds, exp_preds = _predict(evi_finder, cls, queries, docs)
         exp_preds = [pad_exp_pred(exp, doc) for exp, doc in zip(exp_preds, docs_split)]
         pred = postprocess(cls_preds, exp_preds, docs_split, wiki_urls)
         pred['query'] = query
-        dump_quel(temp_data_fname, query, wiki_urls, docs_split, exp_preds, cls_preds, 'w+')
+        pred['max_sentences'] = max_sentence
+        with open(temp_data_fname, 'wb+') as fout:
+            pickle.dump((query, wiki_urls, docs_split, exp_preds, cls_preds), fout)
     return render_template('predict.html', pred=pred)
 
 
@@ -177,26 +182,32 @@ def prediction(query):
 def select():
     with open(temp_fname, 'r') as fin:
         disagree_idxs = eval(str(fin.read()))
-    query, urls, docs, exps, labels = restore_from_temp(temp_data_fname, idxs=disagree_idxs)
+    with open(temp_data_fname, 'rb') as fin:
+        query, urls, docs, exps, labels = pickle.load(fin)
+    input = [list(zip(urls, docs, exps, labels))[idx] for idx in disagree_idxs]
+    urls, docs, exps, labels = zip(*input)
 
-    def _get_ugc(docs, form):
-        labels = []
-        evis = [[0 for w in doc[0]] for doc in docs]
-        for i in range(len(docs)):
-            labels.append(form[f"cls{i}"])
-            if labels[-1] == 'BAD_DOC':
-                continue
-            for j in range(len(docs[i][0])):
-                if form.get(f'exp{i},{j}') is not None:
-                    evis[i][j] = 1
-        return evis, labels
+    # docs_trunc = [doc[:max_sentence] for doc in docs]
+    # docs_rest = [doc[max_sentence] for doc in docs]
 
     if request.method == 'POST':
+        def _get_ugc(docs, form):
+            labels = []
+            evis = [[0 for w in doc[0]] for doc in docs]
+            for i in range(len(docs)):
+                labels.append(form[f"cls{i}"])
+                if labels[-1] == 'BAD_DOC':
+                    continue
+                for j in range(len(docs[i][0])):
+                    if form.get(f'exp{i},{j}') is not None:
+                        evis[i][j] = 1
+            return evis, labels
+
         evis, labels = _get_ugc(docs, request.form)
         dump_quel(ugc_data_fname, query, urls, docs, evis, labels)
         return render_template('thank_contrib.html')
     return render_template('select.html', query=query, docs=docs,
-                           urls=urls, exps=exps, labels=labels)
+                           urls=urls, exps=exps, labels=labels, max_sentence=max_sentence)
 
 
 if __name__ == "__main__":
