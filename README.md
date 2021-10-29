@@ -51,6 +51,7 @@ words of your query. The annotation contributed by the user are appended to the 
 首先切换目录到app路径下，然后在这个下面执行以下命令，该命令使用cloudbuild.yaml文件种列出的命令一条条打包/上传/部署docker container到gcloud run上：
 
 ```gcloud commit --config cloudbuild.yaml .```
+```gcloud build submit --config cloudbuild.yaml .```
 
 ~~用以下命令来把当前目录打包成docker镜像，并上传到gcloud run上进行部署。需要mem：4GB（这个是从run的service里面选的，一个service相当于一个虚拟机）。运行下面这个命令之后会有prompt问service名称，写“default”，区域选12，public available~~
 ~~```gcloud commit beta run deploy --source . --project faxplain --platform managed```~~
