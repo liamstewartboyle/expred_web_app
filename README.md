@@ -79,3 +79,24 @@ words of your query. The annotation contributed by the user are appended to the 
 5. 设置ci过程
 6. 从本地进行gcloud deployment操作
 7. 固定gcloud run的网址，最好是不用gae转发
+
+
+## Docker镜像的另一种操作方法
+
+上面讲的是用gcloud命令配合上configure文件(cloudbuild.yaml)进行构建的方法,实际也可以先在本地用
+
+```docker build -t eu.gcr.io/faxplain/cikm-demo .```
+
+来编译一个本地的image,然后再用
+
+```docker push eu.gcr.io/faxplain/cikm-demo```
+
+直接把本地tagging成eu.gcr.io/faxplain/cikm-demo的镜像推送到同名container registry中(也就是google cloud的image hub) ,如果出现权限认证问题,先运行
+
+``` gcloud auth login```
+
+在浏览器窗口中登录,然后
+
+```gcloud auth configure-docker```
+
+配置docker helper.之后就可以用docker直接push了

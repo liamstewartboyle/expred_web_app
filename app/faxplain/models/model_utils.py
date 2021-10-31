@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Set
 
 import numpy as np
-from gensim.models import KeyedVectors
+# from gensim.models import KeyedVectors
 
 import torch
 from torch import nn
@@ -93,67 +93,67 @@ class PaddedSequence:
         return PaddedSequence(self.data.transpose(0, 1), not self.batch_first, self.padding_value)
 
 
-def extract_embeddings(vocab: Set[str], embedding_file: str, unk_token: str = 'UNK', pad_token: str = 'PAD') -> (
-nn.Embedding, Dict[str, int], List[str]):
-    vocab = vocab | set([unk_token, pad_token])
-    if embedding_file.endswith('.bin'):
-        WVs = KeyedVectors.load_word2vec_format(embedding_file, binary=True)
-
-        word_to_vector = dict()
-        WV_matrix = np.matrix([WVs[v] for v in WVs.vocab.keys()])
-
-        if unk_token not in WVs:
-            mean_vector = np.mean(WV_matrix, axis=0)
-            word_to_vector[unk_token] = mean_vector
-        if pad_token not in WVs:
-            word_to_vector[pad_token] = np.zeros(WVs.vector_size)
-
-        for v in vocab:
-            if v in WVs:
-                word_to_vector[v] = WVs[v]
-
-        interner = dict()
-        deinterner = list()
-        vectors = []
-        count = 0
-        for word in [pad_token, unk_token] + sorted(list(word_to_vector.keys() - {unk_token, pad_token})):
-            vector = word_to_vector[word]
-            vectors.append(np.array(vector))
-            interner[word] = count
-            deinterner.append(word)
-            count += 1
-        vectors = torch.FloatTensor(np.array(vectors))
-        embedding = nn.Embedding.from_pretrained(vectors, padding_idx=interner[pad_token])
-        embedding.weight.requires_grad = False
-        return embedding, interner, deinterner
-    elif embedding_file.endswith('.txt'):
-        word_to_vector = dict()
-        vector = []
-        with open(embedding_file, 'r') as inf:
-            for line in inf:
-                contents = line.strip().split()
-                word = contents[0]
-                vector = torch.tensor([float(v) for v in contents[1:]]).unsqueeze(0)
-                word_to_vector[word] = vector
-        embed_size = vector.size()
-        if unk_token not in word_to_vector:
-            mean_vector = torch.cat(list(word_to_vector.values()), dim=0).mean(dim=0)
-            word_to_vector[unk_token] = mean_vector.unsqueeze(0)
-        if pad_token not in word_to_vector:
-            word_to_vector[pad_token] = torch.zeros(embed_size)
-        interner = dict()
-        deinterner = list()
-        vectors = []
-        count = 0
-        for word in [pad_token, unk_token] + sorted(list(word_to_vector.keys() - {unk_token, pad_token})):
-            vector = word_to_vector[word]
-            vectors.append(vector)
-            interner[word] = count
-            deinterner.append(word)
-            count += 1
-        vectors = torch.cat(vectors, dim=0)
-        embedding = nn.Embedding.from_pretrained(vectors, padding_idx=interner[pad_token])
-        embedding.weight.requires_grad = False
-        return embedding, interner, deinterner
-    else:
-        raise ValueError("Unable to open embeddings file {}".format(embedding_file))
+# def extract_embeddings(vocab: Set[str], embedding_file: str, unk_token: str = 'UNK', pad_token: str = 'PAD') -> (
+# nn.Embedding, Dict[str, int], List[str]):
+#     vocab = vocab | set([unk_token, pad_token])
+#     if embedding_file.endswith('.bin'):
+#         WVs = KeyedVectors.load_word2vec_format(embedding_file, binary=True)
+#
+#         word_to_vector = dict()
+#         WV_matrix = np.matrix([WVs[v] for v in WVs.vocab.keys()])
+#
+#         if unk_token not in WVs:
+#             mean_vector = np.mean(WV_matrix, axis=0)
+#             word_to_vector[unk_token] = mean_vector
+#         if pad_token not in WVs:
+#             word_to_vector[pad_token] = np.zeros(WVs.vector_size)
+#
+#         for v in vocab:
+#             if v in WVs:
+#                 word_to_vector[v] = WVs[v]
+#
+#         interner = dict()
+#         deinterner = list()
+#         vectors = []
+#         count = 0
+#         for word in [pad_token, unk_token] + sorted(list(word_to_vector.keys() - {unk_token, pad_token})):
+#             vector = word_to_vector[word]
+#             vectors.append(np.array(vector))
+#             interner[word] = count
+#             deinterner.append(word)
+#             count += 1
+#         vectors = torch.FloatTensor(np.array(vectors))
+#         embedding = nn.Embedding.from_pretrained(vectors, padding_idx=interner[pad_token])
+#         embedding.weight.requires_grad = False
+#         return embedding, interner, deinterner
+#     elif embedding_file.endswith('.txt'):
+#         word_to_vector = dict()
+#         vector = []
+#         with open(embedding_file, 'r') as inf:
+#             for line in inf:
+#                 contents = line.strip().split()
+#                 word = contents[0]
+#                 vector = torch.tensor([float(v) for v in contents[1:]]).unsqueeze(0)
+#                 word_to_vector[word] = vector
+#         embed_size = vector.size()
+#         if unk_token not in word_to_vector:
+#             mean_vector = torch.cat(list(word_to_vector.values()), dim=0).mean(dim=0)
+#             word_to_vector[unk_token] = mean_vector.unsqueeze(0)
+#         if pad_token not in word_to_vector:
+#             word_to_vector[pad_token] = torch.zeros(embed_size)
+#         interner = dict()
+#         deinterner = list()
+#         vectors = []
+#         count = 0
+#         for word in [pad_token, unk_token] + sorted(list(word_to_vector.keys() - {unk_token, pad_token})):
+#             vector = word_to_vector[word]
+#             vectors.append(vector)
+#             interner[word] = count
+#             deinterner.append(word)
+#             count += 1
+#         vectors = torch.cat(vectors, dim=0)
+#         embedding = nn.Embedding.from_pretrained(vectors, padding_idx=interner[pad_token])
+#         embedding.weight.requires_grad = False
+#         return embedding, interner, deinterner
+#     else:
+#         raise ValueError("Unable to open embeddings file {}".format(embedding_file))

@@ -17,7 +17,3 @@
 __pycache__/
 # Ignored by the build system
 /setup.cfg
-*.ipynb
-.venv
-examples
-*.pt

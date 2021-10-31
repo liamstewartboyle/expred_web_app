@@ -33,7 +33,9 @@ temp_data_fname = f'data/temp_{session_id}.pkl'
 temp_fname = f'data/temp_{session_id}.txt'
 bert_dir = 'bert-base-uncased'
 evi_finder_loc = './trained_models/fever/evidence_token_identifier.pt'
+evi_finder_url = 'https://www.dropbox.com/s/qwinyap4kbxzdvn/evidence_token_identifier.pt?dl=1'
 cls_loc = 'trained_models/fever/evidence_classifier.pt'
+cls_url = 'https://www.dropbox.com/s/oc3qrgl0tqn9mqd/evidence_classifier.pt?dl=1'
 classes = ["SUPPORTS", "REFUTES"]
 device = torch.device('cpu')
 default_ndocs = 3
@@ -54,8 +56,12 @@ else:
     evi_finder = BertMTL(bert_dir=bert_dir,
                          tokenizer=tokenizer,
                          mtl_params=mtl_params,
-                         use_half_precision=False)
-    evi_finder.load_state_dict(torch.load(evi_finder_loc, map_location=device))
+                         use_half_precision=False,
+                         load_from_ckpt=True)
+    if not os.path.isfile(evi_finder_loc):
+        import urllib
+        urllib.request.urlretrieve(evi_finder_url, evi_finder_loc)
+    evi_finder.load_state_dict(torch.load(evi_finder_loc, map_location=device), strict=False)
 
     cls = BertClassifier(bert_dir=bert_dir,
                          pad_token_id=tokenizer.pad_token_id,
@@ -64,8 +70,12 @@ else:
                          num_labels=mtl_params.num_labels,
                          max_length=max_length,
                          mtl_params=mtl_params,
-                         use_half_precision=False)
-    cls.load_state_dict(torch.load(cls_loc, map_location=device))
+                         use_half_precision=False,
+                         load_from_ckpt=True)
+    if not os.path.isfile(cls_loc):
+        import urllib
+        urllib.request.urlretrieve(cls_url, cls_loc)
+    cls.load_state_dict(torch.load(cls_loc, map_location=device), strict=False)
 
 app = Flask(__name__)
 
@@ -140,12 +150,12 @@ def prediction(query):
         def _predict(exp, cls, queries, docs):
             with torch.no_grad():
                 exp.eval()
-
                 aux_preds, exp_preds, att_masks = exp(queries, [i for i in range(default_ndocs)], docs)
 
                 hard_exp_preds = torch.round(exp_preds)
                 queries, docs = mark_evidence(queries, docs, hard_exp_preds, tokenizer, max_length)
 
+                cls.eval()
                 cls_preds = cls(queries, [i for i in range(default_ndocs)], docs)
 
                 aux_preds = [classes[torch.argmax(p)] for p in aux_preds]
@@ -211,4 +221,5 @@ def select():
 
 
 if __name__ == "__main__":
-    app.run(host='127.0.0.1', port=8080)
+    # app.run(host='127.0.0.1', port=8080)
+    app.run(host='0.0.0.0', port=8080)

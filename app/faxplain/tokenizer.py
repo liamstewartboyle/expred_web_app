@@ -2,7 +2,7 @@ from itertools import chain
 from typing import List, Dict, Tuple
 
 import os
-from transformers import BertTokenizer, logger
+from transformers import BertTokenizer
 
 # from expred.models.pipeline.bert_pipeline import bert_intern_doc
 from utils import Evidence, Annotation
@@ -45,7 +45,6 @@ class BertTokenizerWithMapping(BertTokenizer):
 
     def encode_docs(self, documents):
         tokenizer = self
-        logger.info(f'Interning documents')
         special_token_map = {
             'SEP': tokenizer.sep_token_id,
             '[SEP]': tokenizer.sep_token_id,

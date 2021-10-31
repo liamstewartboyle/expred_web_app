@@ -1,4 +1,4 @@
-from transformers import BertModel, BertTokenizer
+from transformers import BertModel, BertTokenizer, BertConfig
 import logging
 
 from models.params import MTLParams
@@ -15,9 +15,16 @@ class BertMTL(nn.Module):
                  tokenizer: BertTokenizer,
                  mtl_params: MTLParams,
                  max_length: int=512,
-                 use_half_precision=True):
+                 use_half_precision=True,
+                 load_from_ckpt=False):
         super(BertMTL, self).__init__()
-        bare_bert = BertModel.from_pretrained(bert_dir)
+
+        if load_from_ckpt:
+            config = BertConfig.from_pretrained(bert_dir)
+            bare_bert = BertModel(config)
+        else:
+            bare_bert = BertModel.from_pretrained(bert_dir)
+
         if use_half_precision:
             import apex
             bare_bert = bare_bert.half()
@@ -87,9 +94,16 @@ class BertClassifier(nn.Module):
                  num_labels: int,
                  mtl_params: MTLParams,
                  max_length: int=512,
-                 use_half_precision=True):
+                 use_half_precision=True,
+                 load_from_ckpt=False):
         super(BertClassifier, self).__init__()
-        bert = BertModel.from_pretrained(bert_dir, num_labels=num_labels)
+
+        if load_from_ckpt:
+            config = BertConfig.from_pretrained(bert_dir)
+            bert = BertModel(config)
+        else:
+            bert = BertModel.from_pretrained(bert_dir, num_labels=num_labels)
+
         if use_half_precision:
             import apex
             bert = bert.half()

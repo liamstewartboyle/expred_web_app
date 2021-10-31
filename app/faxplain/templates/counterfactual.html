@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Counterfactual Assistant</title>
+</head>
+<body>
+{% for i in range( rational | length ) %}
+    <h1> {{ context[i] }} </h1> <h1 class="machine-rational">{{ rational[i] }}</h1>
+{% endfor %}
+<h1>{{ context[-1] }}</h1>
+<span class="cls_pred"><img src="{{ url_for('static', filename='imgs/' + cls_pred + '.png')  }}" alt="{{ cls_pred }}"></span>
+
+<h3>{{ select_rational }}</h3>
+<span class="cls_pred"><img src="{{ url_for('static', filename='imgs/' + select_cls_pred + '.png') }}" alt="{{ select_cls_pred }}"></span>
+
+<h2 style="color: #007fff">Recommendations:</h2>
+<div style="display: block">
+    {% for rec in recommendations %}
+        <span class="conterfactual-rec">
+            {% for j in range( rec | length ) %}
+                <span class="rec-counter">{{ rec[j] }}</span>
+                <span>
+                    <img src="{{ url_for('static', filename='imgs/' + patch_pred[i][j] + '.png') }}" alt="{{ patch_pred[i][j] }}">
+                </span>
+            {% endfor %}
+        </span>
+    {% endfor %}
+</div>
+<h1>Try to <b>flip</b> the prediction by replacing words without changing the meaning of the sentence:</h1>
+<h2>Example: </h2>
+<p>I <b>love</b> the movie -> I <b>like</b> the movie</p>
+{% for i in range(select_rational.split()|length) %}
+    <span class="active-word" id="{{ i }}">{{ select_rational.split()[i] }}</span>
+{% endfor %}
+<button type="button" name="predict">Ask BERT!</button>
+</body>
+</html>
