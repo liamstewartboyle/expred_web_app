@@ -16,10 +16,10 @@ class BertMTL(nn.Module):
                  mtl_params: MTLParams,
                  max_length: int=512,
                  use_half_precision=True,
-                 load_from_ckpt=False):
+                 load_from_local_ckpt=False):
         super(BertMTL, self).__init__()
 
-        if load_from_ckpt:
+        if load_from_local_ckpt:
             config = BertConfig.from_pretrained(bert_dir)
             bare_bert = BertModel(config)
         else:

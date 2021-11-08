@@ -47,7 +47,7 @@ class PaddedSequence:
         return PaddedSequence(padded, batch_lengths, batch_first).to(device=device)
 
     #@classmethod
-    #def autopad(cls, data, len_queries, max_length, batch_first, device):
+    #def autopad(cls_module, data, len_queries, max_length, batch_first, device):
 
 
     def pack_other(self, data: torch.Tensor):

@@ -1,0 +1,3 @@
+[submodule "app/faxplain/expred"]
+	path = app/faxplain/expred
+	url = git.l3s.uni-hannover.de:mreimer/expred

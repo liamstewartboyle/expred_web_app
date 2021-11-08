@@ -4,15 +4,19 @@ import torch
 import os
 
 from debug import get_bogus_pred
+from expred import expred
+from expred.expred.models.utils import fix_name_bare_bert
 from expred_utils import mark_evidence, merge_subtoken_exp_preds, pad_exp_pred, preprocess
 from faxplain_utils import restore_from_temp, dump_quel
 from search import google_rest_api_search as wiki_search
 # from search import bing_wiki_search as wiki_search
 # from search import google_wiki_search as wiki_search
 from tokenizer import BertTokenizerWithMapping
-from models.mlp import BertMTL, BertClassifier
+from transformers import BasicTokenizer
+from expred.expred.models.mlp_mtl import BertMTL, BertClassifierHotflip
 from models.params import MTLParams
 from flask import Flask, request, redirect, url_for, render_template
+from expred.expred.apply_hotflip import hotflip
 import csv
 import random
 
@@ -32,52 +36,71 @@ mgc_data_fname = f'data/mgc_{session_id}.csv'  # machine genarated content
 temp_data_fname = f'data/temp_{session_id}.pkl'
 temp_fname = f'data/temp_{session_id}.txt'
 bert_dir = 'bert-base-uncased'
-evi_finder_loc = './trained_models/fever/evidence_token_identifier.pt'
-evi_finder_url = 'https://www.dropbox.com/s/qwinyap4kbxzdvn/evidence_token_identifier.pt?dl=1'
-cls_loc = 'trained_models/fever/evidence_classifier.pt'
-cls_url = 'https://www.dropbox.com/s/oc3qrgl0tqn9mqd/evidence_classifier.pt?dl=1'
-classes = ["SUPPORTS", "REFUTES"]
+# evi_finder_loc = './trained_models/fever/evidence_token_identifier.pt'
+# evi_finder_url = 'https://www.dropbox.com/s/qwinyap4kbxzdvn/evidence_token_identifier.pt?dl=1'
+# cls_loc = 'trained_models/fever/evidence_classifier.pt'
+# cls_url = 'https://www.dropbox.com/s/oc3qrgl0tqn9mqd/evidence_classifier.pt?dl=1'
+# classes = ["SUPPORTS", "REFUTES"]
+
+evi_finder_loc = './trained_models/movies/evidence_token_identifier.pt'
+evi_finder_url = 'https://www.dropbox.com/s/qen0vx2uz6ksn3m/evidence_token_identifier.pt?dl=1'
+cls_loc = 'trained_models/movies/evidence_classifier.pt'
+cls_url = 'https://www.dropbox.com/s/0sfrdykcg6cf6kh/evidence_classifier.pt?dl=1'
+classes = ["NEG", "POS"]
+
 device = torch.device('cpu')
 default_ndocs = 3
 max_sentence = 30
+n_word_replace = 5
 debug = True
 debug = False
+top_pos = 10
 
 if debug:
     print('debug, will not load models')
 else:
     print("Loading models")
     tokenizer = BertTokenizerWithMapping.from_pretrained(bert_dir)
+    basic_tokenizer = BasicTokenizer()
     max_length = 512
     use_half_precision = False
 
     mtl_params = MTLParams(dim_cls_linear=256, num_labels=2, dim_exp_gru=128)
 
-    evi_finder = BertMTL(bert_dir=bert_dir,
+    mtl_module = BertMTL(bert_dir=bert_dir,
                          tokenizer=tokenizer,
                          mtl_params=mtl_params,
                          use_half_precision=False,
-                         load_from_ckpt=True)
+                         load_from_local_ckpt=True)
     if not os.path.isfile(evi_finder_loc):
         import urllib
         urllib.request.urlretrieve(evi_finder_url, evi_finder_loc)
-    evi_finder.load_state_dict(torch.load(evi_finder_loc, map_location=device), strict=False)
+    mtl_state_dict = torch.load(evi_finder_loc, map_location=device)
+    for k, _ in mtl_state_dict.items():
+        if k.startswith('bert.'):
+            mtl_state_dict = fix_name_bare_bert(mtl_state_dict)
+            break
+    mtl_module.load_state_dict(mtl_state_dict, strict=False)
 
-    cls = BertClassifier(bert_dir=bert_dir,
-                         pad_token_id=tokenizer.pad_token_id,
-                         cls_token_id=tokenizer.cls_token_id,
-                         sep_token_id=tokenizer.sep_token_id,
-                         num_labels=mtl_params.num_labels,
-                         max_length=max_length,
-                         mtl_params=mtl_params,
-                         use_half_precision=False,
-                         load_from_ckpt=True)
+    cls_module = BertClassifierHotflip(bert_dir=bert_dir,
+                                       tokenizer=tokenizer,
+                                       mtl_params=mtl_params,
+                                       max_length=max_length,
+                                       use_half_precision=False,
+                                       return_cls_embedding=True,
+                                       load_from_local_ckpt=True)
     if not os.path.isfile(cls_loc):
         import urllib
         urllib.request.urlretrieve(cls_url, cls_loc)
-    cls.load_state_dict(torch.load(cls_loc, map_location=device), strict=False)
+    cls_state_dict = torch.load(cls_loc, map_location=device)
+    for k, _ in cls_state_dict.items():
+        if k.startswith('bert.'):
+            cls_state_dict = fix_name_bare_bert(cls_state_dict)
+            break
+    cls_module.load_state_dict(cls_state_dict, strict=False)
 
 app = Flask(__name__)
+app.jinja_env.filters['zip'] = zip
 
 
 def clean(query):
@@ -119,6 +142,61 @@ if not os.path.isfile(mgc_data_fname):
         writer.writerow('query url evidence label'.split())
 
 
+def expred_inputs_preprocess(queries, masked_docs, max_length=512):
+    cls_token = torch.LongTensor([tokenizer.cls_token_id])
+    sep_token = torch.LongTensor([tokenizer.sep_token_id])
+    print(queries, masked_docs)
+    inputs = []
+    attention_masks = []
+    for query, mdoc in zip(queries, masked_docs):
+        d = torch.cat((cls_token, query, sep_token, mdoc), dim=-1)
+        if max_length >= len(d):
+            inputs.append(d[:max_length])
+            attention_masks.append(torch.ones_like(d).type(torch.float))
+        else:
+            inputs.append(torch.cat((d, torch.zeros(max_length - len(d)))))
+            attention_masks.append(torch.ones(max_length).type(torch.float))
+    if isinstance(inputs, list):
+        return torch.vstack(inputs), torch.vstack(attention_masks)
+    return torch.LongTensor(inputs), torch.FloatTensor(attention_masks)
+
+
+def exp_pred(exp_module:expred.models.mlp_mtl.BertMTL, queries, docs):
+    with torch.no_grad():
+        exp_module.eval()
+        exp_inputs, attention_masks = expred_inputs_preprocess(queries, docs)
+        aux_preds, exp_preds = exp_module(inputs=exp_inputs, attention_masks=attention_masks)
+
+    aux_preds = [classes[torch.argmax(p)] for p in aux_preds]
+
+    hard_exp_preds = torch.round(exp_preds)
+    masked_docs = mark_evidence(queries, docs, hard_exp_preds, tokenizer, max_length)
+    hard_exp_preds = [p[(len(queries[0]) + 2):] for p in hard_exp_preds]
+
+    return aux_preds, hard_exp_preds, masked_docs
+
+
+def cls_pred(cls_module:expred.models.mlp_mtl.BertClassifier, queries, masked_docs):
+    with torch.no_grad():
+        cls_module.eval()
+        cls_inputs, attention_masks = expred_inputs_preprocess(queries, masked_docs)
+        print(cls_inputs, attention_masks)
+        cls_preds, _ = cls_module(inputs=cls_inputs, attention_masks=attention_masks)
+        print(cls_preds)
+    cls_preds = [classes[torch.argmax(p)] for p in cls_preds]
+    return cls_preds
+
+
+def predict(mtl_module, cls_module, queries, docs, docs_slice):
+    aux_preds, hard_exp_preds, masked_docs = exp_pred(mtl_module, queries, docs)
+
+    hard_exp_preds = merge_subtoken_exp_preds(hard_exp_preds, docs_slice)
+
+    cls_preds = cls_pred(cls_module, queries, masked_docs)
+
+    return aux_preds, cls_preds, hard_exp_preds#, docs_clean
+
+
 @app.route('/prediction/<query>', methods=['GET', 'POST'])
 def prediction(query):
     if request.method == 'POST':
@@ -147,23 +225,6 @@ def prediction(query):
         cls_preds = ['REFUTES' for i in range(3)]
         wiki_urls = pred['links']
     else:
-        def _predict(exp, cls, queries, docs):
-            with torch.no_grad():
-                exp.eval()
-                aux_preds, exp_preds, att_masks = exp(queries, [i for i in range(default_ndocs)], docs)
-
-                hard_exp_preds = torch.round(exp_preds)
-                queries, docs = mark_evidence(queries, docs, hard_exp_preds, tokenizer, max_length)
-
-                cls.eval()
-                cls_preds = cls(queries, [i for i in range(default_ndocs)], docs)
-
-                aux_preds = [classes[torch.argmax(p)] for p in aux_preds]
-                cls_preds = [classes[torch.argmax(p)] for p in cls_preds]
-                hard_exp_preds = [p[(len(queries[0]) + 2):] for p in hard_exp_preds]
-                hard_exp_preds = merge_subtoken_exp_preds(hard_exp_preds, docs_slice)
-            return aux_preds, cls_preds, hard_exp_preds#, docs_clean
-
         # wiki_urls = bing_wiki_search(query)[:default_ndocs]
         wiki_urls = wiki_search(query, default_ndocs)[:default_ndocs]
         if not wiki_urls:
@@ -175,10 +236,10 @@ def prediction(query):
             tokenized_docs,
             docs_slice,
             docs_split
-        ) = preprocess(query, orig_docs, tokenizer, default_ndocs, max_sentence)
+        ) = preprocess(query, orig_docs, tokenizer, basic_tokenizer, default_ndocs, max_sentence)
         queries = [torch.tensor(tokenized_query[0], dtype=torch.long) for i in range(default_ndocs)]
         docs = [torch.tensor(s, dtype=torch.long) for s in tokenized_docs]
-        aux_preds, cls_preds, exp_preds = _predict(evi_finder, cls, queries, docs)
+        aux_preds, cls_preds, exp_preds = predict(mtl_module, cls_module, queries, docs, docs_slice)
         exp_preds = [pad_exp_pred(exp, doc) for exp, doc in zip(exp_preds, docs_split)]
         pred = postprocess(cls_preds, exp_preds, docs_split, wiki_urls)
         pred['query'] = query
@@ -205,7 +266,7 @@ def select():
             labels = []
             evis = [[0 for w in doc[0]] for doc in docs]
             for i in range(len(docs)):
-                labels.append(form[f"cls{i}"])
+                labels.append(form[f"cls_module{i}"])
                 if labels[-1] == 'BAD_DOC':
                     continue
                 for j in range(len(docs[i][0])):
@@ -218,6 +279,91 @@ def select():
         return render_template('thank_contrib.html')
     return render_template('select.html', query=query, docs=docs,
                            urls=urls, exps=exps, labels=labels, max_sentence=max_sentence)
+
+
+# def counterfactual_get():
+#     query = request.args.get('query')
+#     orig_doc = request.args.get('doc')
+#     (
+#         tokenized_query,
+#         query_slice,
+#         tokenized_docs,
+#         docs_slice,
+#         docs_split
+#     ) = preprocess(query, orig_docs, tokenizer, 1, max_sentence)
+#     # [0] for there is only one query and only 1 doc for the counterfactual generation
+#     queries = [torch.tensor(tokenized_query[0], dtype=torch.long)]
+#     docs = [torch.tensor(tokenized_docs[0], dtype=torch.long)]
+#     cls_preds = cls_pred(cls_module, queries, docs)
+#     docs_history = orig_doc
+#     for i in range(n_word_replace):
+#
+#     return render_template('counterfactual.html',
+#                            doc=docs[0],
+#                            cls_pred=cls_preds[0],
+#                            patch=)
+
+
+def get_hotflip(orig_query, orig_doc, cls_label, top_pos):
+    (
+        tokenized_query,
+        query_slice,
+        tokenized_docs,
+        docs_slice,
+        docs_split
+    ) = preprocess(orig_query, [orig_doc], tokenizer, basic_tokenizer, 1, max_sentence)
+    encoded_query = tokenized_query[0]
+    encoded_doc = tokenized_docs[0]
+
+    cls_input = [tokenizer.cls_token_id] + encoded_query + \
+                [tokenizer.sep_token_id] + encoded_doc
+    cls_input = torch.Tensor(cls_input).type(torch.long)
+    # mtl_masked_data = ['.'] * (len(orig_query.split()) + 2) + orig_doc.split()
+    mtl_masked_data = ['[CLS]'] + basic_tokenizer.tokenize(orig_query) + ['[SEP]'] + basic_tokenizer.tokenize(orig_doc)
+    hard_ann_masks = torch.cat((torch.zeros(len(encoded_query) + 2),
+                                torch.ones(len(encoded_doc))), dim=-1)
+    cls_attention_masks = torch.ones_like(cls_input).type(torch.float)
+
+    top_pos = min(top_pos, len(encoded_doc))
+
+    hotflip_res = hotflip(cls_module, tokenizer,
+                          cls_input.unsqueeze(0), [mtl_masked_data], [hard_ann_masks],
+                          cls_attention_masks.unsqueeze(0), cls_label.unsqueeze(0),
+                          label_classes=classes,
+                          top_pos=top_pos,
+                          n_word_flip=n_word_replace,
+                          device='cpu')
+    print(hotflip_res)
+    return hotflip_res
+
+@app.route('/counterfactual', methods=['GET', 'POST'])
+def counterfactual():
+    orig_query = 'what is the sentiment of this review?'
+    orig_doc = 'this movie is awesome !'
+    cls_label = torch.LongTensor([1])
+    hotflip_res = get_hotflip(orig_query, orig_doc, cls_label, top_pos)
+    return render_template('counterfactual.html',
+                           query=orig_query,
+                           orig_doc=orig_doc,
+                           hotflip_res=hotflip_res)
+
+
+@app.route('/doc-history', methods=['GET'])
+def query_history():
+    orig_query = request.args.get('query')
+    orig_doc = request.args.get('doc')
+    (
+        tokenized_query,
+        query_slice,
+        tokenized_docs,
+        docs_slice,
+        docs_split
+    ) = preprocess(orig_query, [orig_doc], tokenizer, basic_tokenizer, 1, max_sentence)
+    # [0] for there is only one query and only 1 doc for the counterfactual generation
+    queries = [torch.tensor(tokenized_query[0], dtype=torch.long)]
+    docs = [torch.tensor(tokenized_docs[0], dtype=torch.long)]
+    cls_preds = cls_pred(cls_module, queries, docs)
+    return render_template('doc-history.html', doc_history=[orig_doc], preds=cls_preds)
 
 
 if __name__ == "__main__":

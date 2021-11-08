@@ -2,14 +2,20 @@ from copy import deepcopy
 from itertools import chain
 
 import torch
+from transformers import BasicTokenizer
 
 
-def preprocess(query, docs, tokenizer, top, max_sentence):
+def preprocess_query(query, tokenizer):
     query = query.split()
     tokenized_q, query_slices = tokenizer.encode_docs([[query]])
     tokenized_q = tokenized_q[0]
     query_slice = query_slices[0]
-    docs_split = [[list(chain.from_iterable([s.split() + ['.'] for s in d.split('.')]))]
+    return tokenized_q, query_slice
+
+
+def preprocess(query, docs, tokenizer, basic_tokenizer, top, max_sentence):
+    tokenized_q, query_slice = preprocess_query(query, tokenizer)
+    docs_split = [[basic_tokenizer.tokenize(d)]
                   for d in docs]
     tokenized_docs, docs_slice = tokenizer.encode_docs([doc[:max_sentence] for doc in docs_split])
     tokenized_docs = [list(chain.from_iterable(tokenized_docs[i])) for i in range(top)]
@@ -29,7 +35,7 @@ def mark_evidence(queries, docs, hard_preds, tokenizer, max_length, wildcard='.'
         temp = torch.cat([torch.zeros(1).type(torch.int64), q, torch.zeros(1).type(torch.int64), d])
         temp = e * temp + (1 - e) * wildcard_tensor
         new_docs.append(temp[(len(queries[0]) + 2):].type(torch.int64))
-    return queries, new_docs
+    return new_docs
 
 
 def pad_exp_pred(exp, doc):

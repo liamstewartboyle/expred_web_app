@@ -11,6 +11,17 @@ from utils import Evidence, Annotation
 class BertTokenizerWithMapping(BertTokenizer):
     def __init__(self, *args, **kwargs):
         super(BertTokenizerWithMapping, self).__init__(*args, **kwargs)
+        self.special_token_map = {
+            'SEP': self.sep_token_id,
+            '[SEP]': self.sep_token_id,
+            '[sep]': self.sep_token_id,
+            'UNK': self.unk_token_id,
+            '[UNK]': self.unk_token_id,
+            '[unk]': self.unk_token_id,
+            'PAD': self.unk_token_id,
+            '[PAD]': self.unk_token_id,
+            '[pad]': self.unk_token_id,
+        }
 
     def tokenize_doc(self, doc: List[List[str]],
                      special_token_map: Dict[str, int]) -> \
@@ -44,25 +55,13 @@ class BertTokenizerWithMapping(BertTokenizer):
                 for s in doc]
 
     def encode_docs(self, documents):
-        tokenizer = self
-        special_token_map = {
-            'SEP': tokenizer.sep_token_id,
-            '[SEP]': tokenizer.sep_token_id,
-            '[sep]': tokenizer.sep_token_id,
-            'UNK': tokenizer.unk_token_id,
-            '[UNK]': tokenizer.unk_token_id,
-            '[unk]': tokenizer.unk_token_id,
-            'PAD': tokenizer.unk_token_id,
-            '[PAD]': tokenizer.unk_token_id,
-            '[pad]': tokenizer.unk_token_id,
-        }
         encoded_docs = {}
         encoded_doc_token_slides = {}
         if not isinstance(documents, dict):
             documents = {i:d for i, d in enumerate(documents)}
         for d, doc in documents.items():
-            tokenized_doc, w_slices = self.tokenize_doc(doc, special_token_map=special_token_map)
-            encoded_docs[d] = self.encode_doc(tokenized_doc, special_token_map=special_token_map)
+            tokenized_doc, w_slices = self.tokenize_doc(doc, special_token_map=self.special_token_map)
+            encoded_docs[d] = self.encode_doc(tokenized_doc, special_token_map=self.special_token_map)
             encoded_doc_token_slides[d] = w_slices
         return encoded_docs, encoded_doc_token_slides
 

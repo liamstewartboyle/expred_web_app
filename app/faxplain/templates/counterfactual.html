@@ -3,36 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <title>Counterfactual Assistant</title>
+<!--    <script src="{{ url_for('static', filename='counterfactual.js') }}"></script> -->
+    <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.0/jquery-ui.min.js"></script>
 </head>
 <body>
-{% for i in range( rational | length ) %}
-    <h1> {{ context[i] }} </h1> <h1 class="machine-rational">{{ rational[i] }}</h1>
-{% endfor %}
-<h1>{{ context[-1] }}</h1>
-<span class="cls_pred"><img src="{{ url_for('static', filename='imgs/' + cls_pred + '.png')  }}" alt="{{ cls_pred }}"></span>
-
-<h3>{{ select_rational }}</h3>
-<span class="cls_pred"><img src="{{ url_for('static', filename='imgs/' + select_cls_pred + '.png') }}" alt="{{ select_cls_pred }}"></span>
-
-<h2 style="color: #007fff">Recommendations:</h2>
-<div style="display: block">
-    {% for rec in recommendations %}
-        <span class="conterfactual-rec">
-            {% for j in range( rec | length ) %}
-                <span class="rec-counter">{{ rec[j] }}</span>
-                <span>
-                    <img src="{{ url_for('static', filename='imgs/' + patch_pred[i][j] + '.png') }}" alt="{{ patch_pred[i][j] }}">
-                </span>
-            {% endfor %}
+<div id="#original">
+    <span id="#original-input" style="display:block">
+        <h2 style="display: inline-flex">Query: <i>{{ query }}</i></h2>
+        <h2>Document and rationals:</h2>
+        <span style="display: inline-flex">
+            <i><h3>{{ orig_doc }}</h3></i>
+            <img src="{{ url_for('static', filename='imgs/' + hotflip_res[0]['pred'] + '.png')  }}" alt="{{ hotflip_res[0]['pred'] }}">
         </span>
-    {% endfor %}
+    </span>
+
+    </span>
 </div>
-<h1>Try to <b>flip</b> the prediction by replacing words without changing the meaning of the sentence:</h1>
-<h2>Example: </h2>
-<p>I <b>love</b> the movie -> I <b>like</b> the movie</p>
-{% for i in range(select_rational.split()|length) %}
-    <span class="active-word" id="{{ i }}">{{ select_rational.split()[i] }}</span>
-{% endfor %}
-<button type="button" name="predict">Ask BERT!</button>
+
+<h2>Try to <b>flip</b> the prediction by replacing words without changing the meaning of the sentence:</h2>
+<h2 style="color: #007fff">Examples:</h2>
+<div style="display: block">
+    <span class="counterfactual-rec">
+        {% for res in hotflip_res[1:] %}
+            <div>
+            <span class="rec-counter">{{ res['input'] }}</span>
+            <span>
+                <img src="{{ url_for('static', filename='imgs/' + res['pred'] + '.png') }}" alt="{{ res['pred'] }}">
+            </span>
+            </div>
+        {% endfor %}
+    </span>
+</div>
+<h2 style="color: #007fff">Your choice:</h2>
+<p>
+    <input id='counterfactual-suggestion' type="text">
+    <button id='test' type="button" name="predict">Ask BERT!</button>
+</p>
+<div id="query-history"></div>
+
+<script>
+    $("button").click(function() {
+        console.log('clicked');
+        let ct = $(this).siblings('#counterfactual-suggestion').val()
+        $.ajax({
+            url: "/doc-history",
+            type: "get",
+            data: {query: "{{ query }}",
+                   doc: ct},
+            success: function(response) {
+                    $("#query-history").html(response);
+                },
+            error: function(xhr) {
+                //Do Something to handle error
+            }
+        });
+    });
+</script>
+
 </body>
 </html>
