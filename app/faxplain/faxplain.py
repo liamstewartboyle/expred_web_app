@@ -5,6 +5,7 @@ import os
 
 from debug import get_bogus_pred
 from expred import expred
+from expred.expred.eraser_utils import get_docids_seq, load_eraser_data, load_documents
 from expred.expred.models.utils import fix_name_bare_bert
 from expred_utils import mark_evidence, merge_subtoken_exp_preds, pad_exp_pred, preprocess
 from faxplain_utils import restore_from_temp, dump_quel
@@ -36,17 +37,24 @@ mgc_data_fname = f'data/mgc_{session_id}.csv'  # machine genarated content
 temp_data_fname = f'data/temp_{session_id}.pkl'
 temp_fname = f'data/temp_{session_id}.txt'
 bert_dir = 'bert-base-uncased'
-# evi_finder_loc = './trained_models/fever/evidence_token_identifier.pt'
-# evi_finder_url = 'https://www.dropbox.com/s/qwinyap4kbxzdvn/evidence_token_identifier.pt?dl=1'
-# cls_loc = 'trained_models/fever/evidence_classifier.pt'
-# cls_url = 'https://www.dropbox.com/s/oc3qrgl0tqn9mqd/evidence_classifier.pt?dl=1'
-# classes = ["SUPPORTS", "REFUTES"]
 
-evi_finder_loc = './trained_models/movies/evidence_token_identifier.pt'
-evi_finder_url = 'https://www.dropbox.com/s/qen0vx2uz6ksn3m/evidence_token_identifier.pt?dl=1'
-cls_loc = 'trained_models/movies/evidence_classifier.pt'
-cls_url = 'https://www.dropbox.com/s/0sfrdykcg6cf6kh/evidence_classifier.pt?dl=1'
-classes = ["NEG", "POS"]
+application = 'counterfactual'
+
+if application == 'faxplain':
+    evi_finder_loc = './trained_models/fever/evidence_token_identifier.pt'
+    evi_finder_url = 'https://www.dropbox.com/s/qwinyap4kbxzdvn/evidence_token_identifier.pt?dl=1'
+    cls_loc = 'trained_models/fever/evidence_classifier.pt'
+    cls_url = 'https://www.dropbox.com/s/oc3qrgl0tqn9mqd/evidence_classifier.pt?dl=1'
+    classes = ["SUPPORTS", "REFUTES"]
+elif application == 'counterfactual':
+    evi_finder_loc = './trained_models/movies/evidence_token_identifier.pt'
+    evi_finder_url = 'https://www.dropbox.com/s/qen0vx2uz6ksn3m/evidence_token_identifier.pt?dl=1'
+    cls_loc = 'trained_models/movies/evidence_classifier.pt'
+    cls_url = 'https://www.dropbox.com/s/0sfrdykcg6cf6kh/evidence_classifier.pt?dl=1'
+    classes = ["NEG", "POS"]
+    dataset_dir = '~/.keras/datasets/movies'
+    data = load_eraser_data(dataset_dir, merge_evidences=True)
+    docs = load_documents(dataset_dir)
 
 device = torch.device('cpu')
 default_ndocs = 3
@@ -119,7 +127,7 @@ def main_page():
     return render_template('index.html')
 
 
-def postprocess(cls_preds, exp_preds, docs_clean, urls):
+def expred_output_to_html(cls_preds, exp_preds, docs_clean, urls):
     cls_strs = [color_cls_pred(c) for c in cls_preds]
     evi_strs = [highlight_exp_pred(exp, doc) for exp, doc in zip(exp_preds, docs_clean)]
     urls = [url.split('/')[-1] for url in urls]
@@ -187,7 +195,7 @@ def cls_pred(cls_module:expred.models.mlp_mtl.BertClassifier, queries, masked_do
     return cls_preds
 
 
-def predict(mtl_module, cls_module, queries, docs, docs_slice):
+def expred_predict(mtl_module, cls_module, queries, docs, docs_slice):
     aux_preds, hard_exp_preds, masked_docs = exp_pred(mtl_module, queries, docs)
 
     hard_exp_preds = merge_subtoken_exp_preds(hard_exp_preds, docs_slice)
@@ -239,9 +247,9 @@ def prediction(query):
         ) = preprocess(query, orig_docs, tokenizer, basic_tokenizer, default_ndocs, max_sentence)
         queries = [torch.tensor(tokenized_query[0], dtype=torch.long) for i in range(default_ndocs)]
         docs = [torch.tensor(s, dtype=torch.long) for s in tokenized_docs]
-        aux_preds, cls_preds, exp_preds = predict(mtl_module, cls_module, queries, docs, docs_slice)
+        aux_preds, cls_preds, exp_preds = expred_predict(mtl_module, cls_module, queries, docs, docs_slice)
         exp_preds = [pad_exp_pred(exp, doc) for exp, doc in zip(exp_preds, docs_split)]
-        pred = postprocess(cls_preds, exp_preds, docs_split, wiki_urls)
+        pred = expred_output_to_html(cls_preds, exp_preds, docs_split, wiki_urls)
         pred['query'] = query
         pred['max_sentences'] = max_sentence
         with open(temp_data_fname, 'wb+') as fout:
@@ -304,6 +312,12 @@ def select():
 #                            patch=)
 
 
+def mask_irrational_tokens(docs, masks, wild_card='.'):
+    wild_card_id = tokenizer.convert_tokens_to_ids([wild_card])[0]
+    masked_docs = [d * (1 - m) + wild_card_id * m for d, m in zip(docs, masks)]
+    return masked_docs
+
+
 def get_hotflip(orig_query, orig_doc, cls_label, top_pos):
     (
         tokenized_query,
@@ -312,14 +326,18 @@ def get_hotflip(orig_query, orig_doc, cls_label, top_pos):
         docs_slice,
         docs_split
     ) = preprocess(orig_query, [orig_doc], tokenizer, basic_tokenizer, 1, max_sentence)
+    tokenized_query = [torch.tensor(tokenized_query[0], dtype=torch.long)]
+    tokenized_docs = [torch.tensor(tokenized_docs[0], dtype=torch.long)]
+    aux_preds, cls_preds, exp_preds = expred_predict(mtl_module, cls_module, tokenized_query, tokenized_docs, docs_slice)
+    exp_preds = [pad_exp_pred(exp, doc) for exp, doc in zip(exp_preds, docs_split)]
+    mtl_masked_data = mask_irrational_tokens(tokenized_docs, exp_preds)
     encoded_query = tokenized_query[0]
     encoded_doc = tokenized_docs[0]
 
     cls_input = [tokenizer.cls_token_id] + encoded_query + \
                 [tokenizer.sep_token_id] + encoded_doc
     cls_input = torch.Tensor(cls_input).type(torch.long)
-    # mtl_masked_data = ['.'] * (len(orig_query.split()) + 2) + orig_doc.split()
-    mtl_masked_data = ['[CLS]'] + basic_tokenizer.tokenize(orig_query) + ['[SEP]'] + basic_tokenizer.tokenize(orig_doc)
+    # mtl_masked_data = ['[CLS]'] + basic_tokenizer.tokenize(orig_query) + ['[SEP]'] + basic_tokenizer.tokenize(orig_doc)
     hard_ann_masks = torch.cat((torch.zeros(len(encoded_query) + 2),
                                 torch.ones(len(encoded_doc))), dim=-1)
     cls_attention_masks = torch.ones_like(cls_input).type(torch.float)
@@ -336,10 +354,19 @@ def get_hotflip(orig_query, orig_doc, cls_label, top_pos):
     print(hotflip_res)
     return hotflip_res
 
+
+def random_select_data(data, docs):
+    selected_ann = random.choice(data)
+    annotation_id = selected_ann.annotation_id
+    docid = get_docids_seq(selected_ann)[0]
+    doc = docs[docid]
+    query = selected_ann.query
+    return annotation_id, query, doc
+
+
 @app.route('/counterfactual', methods=['GET', 'POST'])
 def counterfactual():
-    orig_query = 'what is the sentiment of this review?'
-    orig_doc = 'this movie is awesome !'
+    annotation_id, orig_query, orig_doc = random_select_data(data, docs)
     cls_label = torch.LongTensor([1])
     hotflip_res = get_hotflip(orig_query, orig_doc, cls_label, top_pos)
     return render_template('counterfactual.html',
@@ -365,6 +392,8 @@ def query_history():
     cls_preds = cls_pred(cls_module, queries, docs)
     return render_template('doc-history.html', doc_history=[orig_doc], preds=cls_preds)
 
+docs = []
+data = []
 
 if __name__ == "__main__":
     # app.run(host='127.0.0.1', port=8080)
