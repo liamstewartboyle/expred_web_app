@@ -15,8 +15,7 @@ def preprocess_query(query, tokenizer):
 
 def preprocess(query, docs, tokenizer, basic_tokenizer, top, max_sentence):
     tokenized_q, query_slice = preprocess_query(query, tokenizer)
-    docs_split = [[basic_tokenizer.tokenize(d)]
-                  for d in docs]
+    docs_split = [[basic_tokenizer.tokenize(d)] for d in docs]
     tokenized_docs, docs_slice = tokenizer.encode_docs([doc[:max_sentence] for doc in docs_split])
     tokenized_docs = [list(chain.from_iterable(tokenized_docs[i])) for i in range(top)]
     docs_slice = [list(chain.from_iterable(docs_slice[i]))
@@ -39,8 +38,10 @@ def mark_evidence(queries, docs, hard_preds, tokenizer, max_length, wildcard='.'
 
 
 def pad_exp_pred(exp, doc):
-    doc_len = len(list(chain.from_iterable(doc)))
-    exp = exp[:doc_len] + [0] * (doc_len - len(exp))
+    if isinstance(doc, list):
+        doc = list(chain.from_iterable(doc))
+    doc_len = len(doc)
+    exp = torch.cat((exp[:doc_len], torch.zeros(doc_len - len(exp))))
     return exp
 
 

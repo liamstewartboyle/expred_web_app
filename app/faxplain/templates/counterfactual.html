@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="stylesheet" type="text/css" href="../static/styles/counterfactual.css"/>
     <meta charset="UTF-8">
     <title>Counterfactual Assistant</title>
 <!--    <script src="{{ url_for('static', filename='counterfactual.js') }}"></script> -->
@@ -8,49 +9,52 @@
     <script src="https://code.jquery.com/ui/1.13.0/jquery-ui.min.js"></script>
 </head>
 <body>
-<div id="#original">
-    <span id="#original-input" style="display:block">
-        <h2 style="display: inline-flex">Query: <i>{{ query }}</i></h2>
-        <h2>Document and rationals:</h2>
-        <span style="display: inline-flex">
-            <i><h3>{{ orig_doc }}</h3></i>
-            <img src="{{ url_for('static', filename='imgs/' + hotflip_res[0]['pred'] + '.png')  }}" alt="{{ hotflip_res[0]['pred'] }}">
-        </span>
-    </span>
-
-    </span>
-</div>
-
-<h2>Try to <b>flip</b> the prediction by replacing words without changing the meaning of the sentence:</h2>
-<h2 style="color: #007fff">Examples:</h2>
-<div style="display: block">
-    <span class="counterfactual-rec">
-        {% for res in hotflip_res[1:] %}
-            <div>
-            <span class="rec-counter">{{ res['input'] }}</span>
-            <span>
-                <img src="{{ url_for('static', filename='imgs/' + res['pred'] + '.png') }}" alt="{{ res['pred'] }}">
+<div class="main", style="display: inline-flex">
+    <div id="#original", style="width: 50%;display:block;margin-left: 20px;margin-right: 10px;">
+        <span id="#original-input" style="display:block">
+            <h4 style="display: inline-flex">Query: <i>{{ query }}</i></h4>
+            <span style="display: inline-flex">
+                <h4>Label: </h4><img class='sentiment' src="{{ url_for('static', filename='imgs/' + label + '.png')  }}" alt="{{ label }}">
+                <h4>Pred: </h4><img class='sentiment' src="{{ url_for('static', filename='imgs/' + pred + '.png')  }}" alt="{{ pred }}">
             </span>
-            </div>
-        {% endfor %}
-    </span>
-</div>
-<h2 style="color: #007fff">Your choice:</h2>
-<p>
-    <input id='counterfactual-suggestion' type="text">
-    <button id='test' type="button" name="predict">Ask BERT!</button>
-</p>
-<div id="query-history"></div>
+            <h3>Document and rationals:</h3>
+            <i>
+            <span style="display: block">
+                {% for sent in orig_doc %}
+                    <span class="sentence" style=" ">
+                        {{ sent|safe|escape }}
+                    </span>
+                {% endfor %}
+            </span>
+            </i>
+        </span>
+    </div>
 
+    <div class='user_generated' style="margin-left: 10px;margin-right: 20px;">
+        <h2>Try to <b>flip</b> the prediction by replacing words without changing the meaning of the sentence:</h2>
+        <span id="example"></span>
+
+        <div id="user-choice", style="display: none">
+        <h2 style="color: #007fff">Your choice:</h2>
+        <p>
+            <input id='counterfactual-suggestion' type="text">
+            <button id='ask-bert' type="button" name="predict">Ask BERT!</button>
+        </p>
+        <div id="query-history"></div>
+        </div>
+    </div>
+
+</div>
 <script>
-    $("button").click(function() {
+    $("#ask-bert").click(function() {
         console.log('clicked');
         let ct = $(this).siblings('#counterfactual-suggestion').val()
         $.ajax({
             url: "/doc-history",
             type: "get",
             data: {query: "{{ query }}",
-                   doc: ct},
+                   doc: ct,
+                   label: "{{ label }}",},
             success: function(response) {
                     $("#query-history").html(response);
                 },
@@ -59,6 +63,25 @@
             }
         });
     });
+    $(".sentence").click(function() {
+        let sent = $(this).text()
+        console.log($(this).text());
+        $.ajax({
+            url: "/show_example",
+            type: "get",
+            data: {query: "{{ query }}",
+                   doc: sent,
+                   label: "{{ label }}",},
+            success: function(response) {
+                    $("#example").html(response);
+                    $("#user-choice").css('display', "inherit")
+                },
+            error: function(xhr) {
+                //Do Something to handle error
+            }
+        });
+    });
+
 </script>
 
 </body>

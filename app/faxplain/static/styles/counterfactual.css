@@ -1,0 +1,16 @@
+.token {
+    float: left;
+}
+
+.sentence {
+    margin-bottom: 5px;
+}
+
+span.sentence:hover>.token {background-color:yellow !important;}
+
+.sentiment {
+    width: 30px;
+    height: 30px;
+    align-self: center;
+}
+

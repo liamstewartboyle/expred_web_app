@@ -1,0 +1,23 @@
+<link rel="stylesheet" type="text/css" href="../static/styles/counterfactual.css"/>
+
+<h2 style="color: #007fff">Examples:</h2>
+<div style="display: block">
+    <span class="counterfactual-rec">
+            <div>
+                <span class="rec-counter"><i>{{ hotflip_res[0]['input'] }}</i></span>
+            <span>
+                <img src="{{ url_for('static', filename='imgs/' + hotflip_res[0]['pred'] + '.png') }}" alt="{{ hotflip_res[0]['pred'] }}">
+            </span>
+            </div>
+    </span>
+    <span class="counterfactual-rec">
+        {% for res in hotflip_res[1:] %}
+            <div>
+            <span class="rec-counter">{{ res['input'] }}</span>
+            <span>
+                <img src="{{ url_for('static', filename='imgs/' + res['pred'] + '.png') }}" alt="{{ res['pred'] }}">
+            </span>
+            </div>
+        {% endfor %}
+    </span>
+</div>

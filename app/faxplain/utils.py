@@ -221,24 +221,27 @@ def load_documents_from_file(data_dir: str, docids: Set[str] = None) -> Dict[str
     return res
 
 
-def highlight_exp_pred(exp, doc):
+def highlight_exp_pred(exp, doc, highlight='yellow', shorten=True):
     ret = ''
     abrcount = 0
     abrflag = False  # for abbreviation
     for e, w in zip(exp, doc[0]):
         if e == 1:
-            ret += f'<span style="background-color:#FFFF00; float: left">{w}&nbsp;</span>'
+            if highlight == 'bold':
+                ret += f'<b class="token">{w}&nbsp;</b>'
+            else:
+                ret += f'<span style="background-color:#FFFF00; float: left">{w}&nbsp;</span>'
             abrcount = 0
             abrflag = False
         else:
             if abrflag:
                 continue
             abrcount += 1
-            if abrcount > 4:
+            if abrcount > 4 and shorten:
                 abrflag = True
-                ret += f'<span style="float:left">...&nbsp;</span>'
+                ret += f'<span class=“token”>...&nbsp;</span>'
             else:
-                ret += f'<span style="float:left">{w}&nbsp;</span>'
+                ret += f'<span class="token">{w}&nbsp;</span>'
     return ret
 
 
