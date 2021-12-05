@@ -1,10 +1,19 @@
 <link rel="stylesheet" type="text/css" href="../static/styles/counterfactual.css"/>
 
 <h2 style="color: #007fff">Examples:</h2>
+<h3> HotFlip: </h3>
 <div style="display: block">
     <span class="counterfactual-rec">
             <div>
-                <span class="rec-counter"><i>{{ hotflip_res[0]['input'] }}</i></span>
+                <b>- 0 word(s) swapped: </b><span class="rec-counter"><i>
+                    {% for word, mask in hotflip_res[0]['input']|zip(hotflip_res[0]['mask']) %}
+                        {% if mask == 1.0 %}
+                            <span class="ann-pos">{{ word }}</span>
+                        {% else %}
+                            <span class="ann-neg">{{ word }}</span>
+                        {% endif %}
+                    {% endfor %}
+                </i></span>
             <span>
                 <img src="{{ url_for('static', filename='imgs/' + hotflip_res[0]['pred'] + '.png') }}" alt="{{ hotflip_res[0]['pred'] }}">
             </span>
@@ -13,7 +22,7 @@
     <span class="counterfactual-rec">
         {% for res in hotflip_res[1:] %}
             <div>
-            <span class="rec-counter">{{ res['input'] }}</span>
+                <b>- {{ loop.index0 + 1 }} word(s) swapped: </b><span class="rec-counter">{{ res['input'] }}</span>
             <span>
                 <img src="{{ url_for('static', filename='imgs/' + res['pred'] + '.png') }}" alt="{{ res['pred'] }}">
             </span>

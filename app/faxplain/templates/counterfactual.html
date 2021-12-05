@@ -9,10 +9,12 @@
     <script src="https://code.jquery.com/ui/1.13.0/jquery-ui.min.js"></script>
 </head>
 <body>
+<div>Awsome introduction</div>
 <div class="main", style="display: inline-flex">
     <div id="#original", style="width: 50%;display:block;margin-left: 20px;margin-right: 10px;">
         <span id="#original-input" style="display:block">
             <h4 style="display: inline-flex">Query: <i>{{ query }}</i></h4>
+            <br>
             <span style="display: inline-flex">
                 <h4>Label: </h4><img class='sentiment' src="{{ url_for('static', filename='imgs/' + label + '.png')  }}" alt="{{ label }}">
                 <h4>Pred: </h4><img class='sentiment' src="{{ url_for('static', filename='imgs/' + pred + '.png')  }}" alt="{{ pred }}">
@@ -31,10 +33,10 @@
     </div>
 
     <div class='user_generated' style="margin-left: 10px;margin-right: 20px;">
-        <h2>Try to <b>flip</b> the prediction by replacing words without changing the meaning of the sentence:</h2>
+{#        <h2>Try to <b>flip</b> the prediction by replacing words without changing the meaning of the sentence:</h2>#}
         <span id="example"></span>
 
-        <div id="user-choice", style="display: none">
+        <div id="user-choice" style="display: none">
         <h2 style="color: #007fff">Your choice:</h2>
         <p>
             <input id='counterfactual-suggestion' type="text">

@@ -238,26 +238,27 @@ def select():
 def mask_irrational_tokens(docs, masks, wild_card='.'):
     wild_card_id = tokenizer.convert_tokens_to_ids([wild_card])[0]
     masks = [torch.Tensor(m) for m in masks]
-    masked_docs = [d * (1 - m) + wild_card_id * m for d, m in zip(docs, masks)]
+    masked_docs = [d * m + wild_card_id * (1 - m) for d, m in zip(docs, masks)]
     return masked_docs
 
 
-def get_hotflip(orig_query, orig_doc, cls_label, top_pos):
+def get_hotflip(orig_query, orig_doc, cls_label, top_poses):
     (
-        tokenized_query,
+        encoded_queries,
         query_slice,
-        tokenized_docs,
+        encoded_docs,
         docs_slice,
         docs_split
     ) = preprocess(orig_query, [orig_doc], tokenizer, basic_tokenizer, 1, max_sentence)
-    tokenized_query = [torch.tensor(tokenized_query[0], dtype=torch.long)]
-    tokenized_docs = [torch.tensor(tokenized_docs[0], dtype=torch.long)]
-    aux_preds, cls_preds, exp_preds = expred_predict(mtl_module, cls_module, tokenized_query, tokenized_docs, docs_slice)
-    exp_preds = [pad_exp_pred(exp, doc) for exp, doc in zip(exp_preds, tokenized_docs)]
-    mtl_masked_sentences = mask_irrational_tokens(tokenized_docs, exp_preds)
-    mtl_masked_sentences = ' '.join(tokenizer.convert_ids_to_tokens(mtl_masked_sentences[0].tolist()))
-    encoded_query = tokenized_query[0]
-    encoded_doc = tokenized_docs[0]
+    encoded_queries = [torch.tensor(encoded_queries[0], dtype=torch.long)]
+    encoded_docs = [torch.tensor(encoded_docs[0], dtype=torch.long)]
+    encoded_query = encoded_queries[0]
+    encoded_doc = encoded_docs[0]
+    # the exp_preds are on docs only (no queries or overhead), thus len(exp_preds[0]) == len(tokenized_docs[0].shape)
+    aux_preds, cls_preds, exp_preds = expred_predict(mtl_module, cls_module, encoded_queries, encoded_docs, docs_slice)
+    exp_preds = [pad_exp_pred(exp, doc) for exp, doc in zip(exp_preds, encoded_docs)]
+    mtl_masked_doc = mask_irrational_tokens(encoded_docs, exp_preds)
+    mtl_masked_doc = ' '.join(tokenizer.convert_ids_to_tokens(mtl_masked_doc[0].tolist()))
 
     cls_input = torch.cat(
         (torch.Tensor([tokenizer.cls_token_id]),
@@ -266,25 +267,33 @@ def get_hotflip(orig_query, orig_doc, cls_label, top_pos):
          encoded_doc))
     cls_input = torch.Tensor(cls_input).type(torch.long)
     # mtl_masked_data = ['[CLS]'] + basic_tokenizer.tokenize(orig_query) + ['[SEP]'] + basic_tokenizer.tokenize(orig_doc)
-    hard_ann_masks = torch.cat((torch.zeros(len(encoded_query) + 2),
-                                torch.ones(len(encoded_doc))), dim=-1)
+    # hard_ann_masks = torch.cat((torch.zeros(len(encoded_query) + 2),
+    #                             torch.ones(len(encoded_doc))), dim=-1)
+    # print('cls_input: ', cls_input)
+    # print('mtl_masked_sentences: ', mtl_masked_doc)
+    # print('exp_preds: ', exp_preds)
     cls_attention_masks = torch.ones_like(cls_input).type(torch.float)
 
-    top_pos = min(top_pos, len(encoded_doc))
+    top_poses = min(top_poses, len(encoded_doc))
 
     hotflip_res = hotflip(cls_module, tokenizer,
-                          cls_input.unsqueeze(0), [[mtl_masked_sentences]], [hard_ann_masks], cls_attention_masks.unsqueeze(0),
+                          cls_input.unsqueeze(0), [[mtl_masked_doc]], exp_preds, cls_attention_masks.unsqueeze(0),
                           cls_label.unsqueeze(0),
                           label_classes=class_names,
-                          top_pos=top_pos,
+                          top_poses=top_poses,
                           n_word_flip=n_word_replace,
                           device='cpu')
-    print(hotflip_res)
+    hotflip_res[0]['input'] = tokenizer.convert_ids_to_tokens(encoded_doc)
+    hotflip_res[0]['mask'] = exp_preds[0]
+    # print(hotflip_res)
     return hotflip_res
 
 
 def random_select_data(data, docs):
-    selected_ann = data[random.choice(list(data.keys()))]
+    # k = random.choice(list(data.keys()))
+    k = 'negR_260.txt'
+    selected_ann = data[k]
+    print("key: ", k)
     ann_id = selected_ann.ann_id
     docid = selected_ann.docid
     doc = docs[docid]
@@ -328,19 +337,22 @@ def counterfactual():
 
 @app.route('/show_example', methods=['GET'])
 def show_example():
-    orig_query = request.args.get('query')
-    orig_doc = request.args.get('doc')
+    orig_query = request.args.get('query').strip()
+    orig_doc = request.args.get('doc').strip()
     orig_label = request.args.get('label')
-    (
-        tokenized_query,
-        query_slice,
-        tokenized_docs,
-        docs_slice,
-        docs_split
-    ) = preprocess(orig_query, [orig_doc], tokenizer, basic_tokenizer, 1, max_sentence)
+    # print(len(orig_query), orig_query)
+    # print(len(orig_doc), orig_doc)
+    # print(orig_label)
+    # (
+    #     tokenized_query,
+    #     query_slice,
+    #     tokenized_docs,
+    #     docs_slice,
+    #     docs_split
+    # ) = preprocess(orig_query, [orig_doc], tokenizer, basic_tokenizer, 1, max_sentence)
     # [0] for there is only one query and only 1 doc for the counterfactual generation
-    queries = [torch.tensor(tokenized_query[0], dtype=torch.long)]
-    docs = [torch.tensor(tokenized_docs[0], dtype=torch.long)]
+    # queries = [torch.tensor(tokenized_query[0], dtype=torch.long)]
+    # docs = [torch.tensor(tokenized_docs[0], dtype=torch.long)]
     cls_label = torch.LongTensor(class_names.index(orig_label))
     hotflip_res = get_hotflip(orig_query, orig_doc, cls_label, top_pos)
     return render_template('show_example.html', hotflip_res=hotflip_res)

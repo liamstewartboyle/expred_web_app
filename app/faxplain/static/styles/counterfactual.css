@@ -14,3 +14,6 @@ span.sentence:hover>.token {background-color:yellow !important;}
     align-self: center;
 }
 
+.ann-pos {
+    font-weight: bold;
+}
