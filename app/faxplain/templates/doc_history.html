@@ -1,12 +1,11 @@
 <link rel="stylesheet" type="text/css" href="../static/styles/counterfactual.css"/>
 <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
 <script src="https://code.jquery.com/ui/1.13.0/jquery-ui.min.js"></script>
-<h2 style="color: #007fff">Examples:</h2>
-<h3> HotFlip: </h3>
+<div class="user-chosen-content">
 <div style="display: block">
     <span class="counterfactual-rec">
             <div>
-                <b>- 0 word(s) swapped: </b><span class="rec-counter" id="selected-sentence"><i>
+                <b>- 0 word(s) swapped: </b><span class="rec-counter" id="user-chosen-selected-sentence"><i>
                     {% for word, mask in hotflip_res[0]['doc']|zip(hotflip_res[0]['mask']) %}
                         {% if mask == 1.0 %}
                             <span class="example-token ann-pos">{{ word }}</span>
@@ -31,9 +30,4 @@
         {% endfor %}
     </span>
 </div>
-
-<script>
-    $("#selected-sentence .example-token").on('click', function(e){
-        $(this).toggleClass('ann-pos ann-neg')
-    })
-</script>
+</div>

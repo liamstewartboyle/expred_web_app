@@ -38,10 +38,11 @@
 
         <div id="user-choice" style="display: none">
         <h2 style="color: #007fff">Your choice:</h2>
-        <p>
-            <input id='counterfactual-suggestion' type="text">
-            <button id='ask-bert' type="button" name="predict">Ask BERT!</button>
-        </p>
+            <p><button id="apply-mask" type="button" name="predict-mask">Apply this mask!</button></p>
+            <!--<p>
+                <input id='counterfactual-suggestion' type="text">
+                <button id='ask-bert' type="button" name="predict">Ask BERT!</button>
+            </p>-->
         <div id="query-history"></div>
         </div>
     </div>
@@ -49,7 +50,6 @@
 </div>
 <script>
     $("#ask-bert").click(function() {
-        console.log('clicked');
         let ct = $(this).siblings('#counterfactual-suggestion').val()
         $.ajax({
             url: "/doc-history",
@@ -67,7 +67,6 @@
     });
     $(".sentence").click(function() {
         let sent = $(this).text()
-        console.log($(this).text());
         $.ajax({
             url: "/show_example",
             type: "get",
@@ -76,7 +75,25 @@
                    label: "{{ label }}",},
             success: function(response) {
                     $("#example").html(response);
-                    $("#user-choice").css('display', "inherit")
+                    $("#user-choice").css('display', "inherit");
+                    $("#query-history .user-chosen-content").remove();
+                },
+            error: function(xhr) {
+                //Do Something to handle error
+            }
+        });
+    });
+
+    $("#apply-mask").click(function() {
+        let masked_raw_html = $('#selected-sentence').html()
+        $.ajax({
+            url: "/doc_history",
+            type: "get",
+            data: {query: "{{ query }}",
+                   masked_raw_html: masked_raw_html,
+                   label: "{{ label }}",},
+            success: function(response) {
+                    $("#query-history").html(response);
                 },
             error: function(xhr) {
                 //Do Something to handle error

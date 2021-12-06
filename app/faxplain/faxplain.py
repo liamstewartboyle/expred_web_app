@@ -1,5 +1,6 @@
 import pickle
 from itertools import chain
+from typing import List
 
 import torch
 import os
@@ -8,7 +9,8 @@ from debug import get_bogus_pred
 from expred import expred
 from expred.expred.eraser_utils import get_docids_seq, load_eraser_data, load_documents
 from expred.expred.models.utils import fix_name_bare_bert
-from expred_utils import mark_evidence, merge_subtoken_exp_preds, pad_exp_pred, preprocess
+from expred_utils import apply_masks_to_docs, merge_subtoken_exp_preds, preprocess
+from app.faxplain.expred.expred.utils import pad_mask_to_doclen
 from faxplain_utils import restore_from_temp, dump_quel
 from search import google_rest_api_search as wiki_search
 # from search import bing_wiki_search as wiki_search
@@ -94,7 +96,7 @@ def expred_inputs_preprocess(queries, masked_docs, max_length=512):
     return torch.LongTensor(inputs), torch.FloatTensor(attention_masks)
 
 
-def exp_pred(exp_module:expred.models.mlp_mtl.BertMTL, queries, docs):
+def mtl_predict(exp_module:expred.models.mlp_mtl.BertMTL, queries, docs):
     with torch.no_grad():
         exp_module.eval()
         max_length = min(max(map(len, docs)) + 2 + len(queries[0]), 512)
@@ -103,15 +105,16 @@ def exp_pred(exp_module:expred.models.mlp_mtl.BertMTL, queries, docs):
     aux_preds = [class_names[torch.argmax(p)] for p in aux_preds]
 
     hard_exp_preds = torch.round(exp_preds)
-    masked_docs = mark_evidence(queries, docs, hard_exp_preds, tokenizer, max_length)
+    # masked_inputs = apply_masks_to_docs(queries, docs, hard_exp_preds, tokenizer, max_length)
+    masked_docs = apply_masks_to_docs(queries, docs, hard_exp_preds, tokenizer, max_length)
+
     docs_start = len(queries[0]) + 2
     docs_end = [docs_start + len(d) for d in masked_docs]
     hard_exp_preds = [p[docs_start: doc_end] for p, doc_end in zip(hard_exp_preds, docs_end)]
-
     return aux_preds, hard_exp_preds, masked_docs
 
 
-def cls_pred(cls_module:expred.models.mlp_mtl.BertClassifierHotflip, queries, masked_docs):
+def cls_predict(cls_module:expred.models.mlp_mtl.BertClassifierHotflip, queries, masked_docs):
     with torch.no_grad():
         cls_module.eval()
         cls_inputs, attention_masks = expred_inputs_preprocess(queries, masked_docs)
@@ -122,8 +125,8 @@ def cls_pred(cls_module:expred.models.mlp_mtl.BertClassifierHotflip, queries, ma
 
 
 def expred_predict(mtl_module, cls_module, queries, docs, docs_slice):
-    aux_preds, hard_exp_preds, masked_docs = exp_pred(mtl_module, queries, docs)
-    cls_preds = cls_pred(cls_module, queries, masked_docs)
+    aux_preds, hard_exp_preds, masked_docs = mtl_predict(mtl_module, queries, docs)
+    cls_preds = cls_predict(cls_module, queries, masked_docs)
     return aux_preds, cls_preds, hard_exp_preds#, docs_clean
 
 
@@ -169,9 +172,9 @@ def prediction(query):
         ) = preprocess(query, orig_docs, tokenizer, basic_tokenizer, default_ndocs, max_sentence)
         queries = [torch.tensor(tokenized_query[0], dtype=torch.long) for i in range(default_ndocs)]
         docs = [torch.tensor(s, dtype=torch.long) for s in tokenized_docs]
-        aux_preds, cls_preds, exp_preds = expred_predict(mtl_module, cls_module, queries, docs, docs_slice)
+        aux_preds, cls_preds, exp_preds, masked_docs = expred_predict(mtl_module, cls_module, queries, docs, docs_slice)
         exp_preds = merge_subtoken_exp_preds(exp_preds, docs_slice)
-        exp_preds = [pad_exp_pred(exp, doc) for exp, doc in zip(exp_preds, docs_split)]
+        exp_preds = [pad_mask_to_doclen(exp, doc) for exp, doc in zip(exp_preds, docs_split)]
         pred = machine_rationale_mask_to_html(cls_preds, exp_preds, docs_split, wiki_urls)
         pred['query'] = query
         pred['max_sentences'] = max_sentence
@@ -225,66 +228,99 @@ def select():
 #     # [0] for there is only one query and only 1 doc for the counterfactual generation
 #     queries = [torch.tensor(tokenized_query[0], dtype=torch.long)]
 #     docs = [torch.tensor(tokenized_docs[0], dtype=torch.long)]
-#     cls_preds = cls_pred(cls_module, queries, docs)
+#     cls_preds = cls_predict(cls_module, queries, docs)
 #     docs_history = orig_doc
 #     for i in range(n_word_replace):
 #
 #     return render_template('counterfactual.html',
 #                            doc=docs[0],
-#                            cls_pred=cls_preds[0],
+#                            cls_predict=cls_preds[0],
 #                            patch=)
 
 
-def mask_irrational_tokens(docs, masks, wild_card='.'):
-    wild_card_id = tokenizer.convert_tokens_to_ids([wild_card])[0]
-    masks = [torch.Tensor(m) for m in masks]
-    masked_docs = [d * m + wild_card_id * (1 - m) for d, m in zip(docs, masks)]
-    return masked_docs
+# def apply_masks_to_docs(docs, masks, wild_card='.'):
+#     wild_card_id = tokenizer.convert_tokens_to_ids([wild_card])[0]
+#     masks = [torch.Tensor(m) for m in masks]
+#     masked_docs = [d * m + wild_card_id * (1 - m) for d, m in zip(docs, masks)]
+#     return masked_docs
 
 
-def get_hotflip(orig_query, orig_doc, cls_label, top_poses):
+def fit_mask_to_decoded_docs(mask, tokens):
+    ret_mask = []
+    p = 0
+    for t in tokens:
+        tokenized_t = tokenizer.tokenize(t)
+        ret_mask.append(max(mask[p: p+len(tokenized_t)]))
+        p += len(tokenized_t)
+    return ret_mask
+
+
+def get_hotflip(orig_query:str, orig_doc:str, cls_label, top_poses, custom_masks:List[List[int]]=None):
     (
         encoded_queries,
         query_slice,
         encoded_docs,
         docs_slice,
-        docs_split
-    ) = preprocess(orig_query, [orig_doc], tokenizer, basic_tokenizer, 1, max_sentence)
+        docs_split,
+        custom_masks
+    ) = preprocess(orig_query, [orig_doc], tokenizer, basic_tokenizer, 1, max_sentence, custom_masks)
+    print(len(encoded_queries[0]))
+    print(len(encoded_docs[0]))
+    print(len(custom_masks[0]) if custom_masks else "None")
     encoded_queries = [torch.tensor(encoded_queries[0], dtype=torch.long)]
-    encoded_docs = [torch.tensor(encoded_docs[0], dtype=torch.long)]
     encoded_query = encoded_queries[0]
+    encoded_docs = [torch.tensor(encoded_docs[0], dtype=torch.long)]
     encoded_doc = encoded_docs[0]
-    # the exp_preds are on docs only (no queries or overhead), thus len(exp_preds[0]) == len(tokenized_docs[0].shape)
-    aux_preds, cls_preds, exp_preds = expred_predict(mtl_module, cls_module, encoded_queries, encoded_docs, docs_slice)
-    exp_preds = [pad_exp_pred(exp, doc) for exp, doc in zip(exp_preds, encoded_docs)]
-    mtl_masked_doc = mask_irrational_tokens(encoded_docs, exp_preds)
-    mtl_masked_doc = ' '.join(tokenizer.convert_ids_to_tokens(mtl_masked_doc[0].tolist()))
+    top_poses = min(top_poses, len(encoded_doc))
+    max_length = min(len(encoded_doc) + 2 + len(encoded_query), 512)
+    print(max_length)
 
-    cls_input = torch.cat(
+    # the doc_masks are for docs only (no queries or overhead), thus len(doc_masks[0]) == len(tokenized_docs[0].shape)
+    if custom_masks:
+        doc_masks = [torch.Tensor(m) for m in custom_masks]
+        masked_docs = apply_masks_to_docs(encoded_queries, encoded_docs, doc_masks, tokenizer, max_length)
+    else:
+        _, doc_masks, masked_docs = mtl_predict(mtl_module, encoded_queries, encoded_docs)
+
+    #TODO: fix these magic numbers
+    masked_doc = masked_docs[0]
+    doc_mask = doc_masks[0]
+
+    hotflip_masks = [torch.cat([
+        torch.zeros(len(encoded_query) + 2).type(torch.long),
+        pad_mask_to_doclen(mask, doc)
+    ]) for doc, mask in zip(encoded_docs, doc_masks)]
+    hotflip_masks = torch.stack(hotflip_masks, dim=0)
+
+    cls_inputs = torch.cat(
         (torch.Tensor([tokenizer.cls_token_id]),
          encoded_query,
          torch.Tensor([tokenizer.sep_token_id]),
-         encoded_doc))
-    cls_input = torch.Tensor(cls_input).type(torch.long)
+         masked_doc)).type(torch.long).unsqueeze(0)
     # mtl_masked_data = ['[CLS]'] + basic_tokenizer.tokenize(orig_query) + ['[SEP]'] + basic_tokenizer.tokenize(orig_doc)
     # hard_ann_masks = torch.cat((torch.zeros(len(encoded_query) + 2),
     #                             torch.ones(len(encoded_doc))), dim=-1)
     # print('cls_input: ', cls_input)
     # print('mtl_masked_sentences: ', mtl_masked_doc)
     # print('exp_preds: ', exp_preds)
-    cls_attention_masks = torch.ones_like(cls_input).type(torch.float)
+    cls_attention_masks = torch.ones_like(cls_inputs).type(torch.float).unsqueeze(0)
 
-    top_poses = min(top_poses, len(encoded_doc))
-
-    hotflip_res = hotflip(cls_module, tokenizer,
-                          cls_input.unsqueeze(0), [[mtl_masked_doc]], exp_preds, cls_attention_masks.unsqueeze(0),
+    hotflip_res = hotflip(cls_module, cls_inputs, hotflip_masks, cls_attention_masks,
                           cls_label.unsqueeze(0),
                           label_classes=class_names,
                           top_poses=top_poses,
-                          n_word_flip=n_word_replace,
+                          max_n_words_to_replace=n_word_replace,
                           device='cpu')
-    hotflip_res[0]['input'] = tokenizer.convert_ids_to_tokens(encoded_doc)
-    hotflip_res[0]['mask'] = exp_preds[0]
+    hotflip_doc = hotflip_res[0]['input'][(len(encoded_query) + 2):]
+    hotflip_doc = encoded_doc * (1 - doc_mask) + hotflip_doc * doc_mask
+    decoded_doc = tokenizer.decode(hotflip_doc)
+    hotflip_res[0]['doc'] = basic_tokenizer.tokenize(decoded_doc)
+    hotflip_res[0]['mask'] = fit_mask_to_decoded_docs(doc_masks[0], hotflip_res[0]['doc'])
+    for i in range(1, len(hotflip_res)):
+        hotflip_doc = hotflip_res[i]['input'][(len(encoded_query) + 2):]
+        hotflip_doc = encoded_doc * (1 - doc_mask) + hotflip_doc * doc_mask
+        hotflip_res[i]['doc'] = tokenizer.decode(hotflip_doc)
+
     # print(hotflip_res)
     return hotflip_res
 
@@ -315,9 +351,10 @@ def counterfactual():
         query_slice,
         tokenized_docs,
         docs_slice,
-        docs_split
+        docs_split,
+        _
     ) = preprocess(orig_query, [orig_doc], tokenizer, basic_tokenizer, 1, 30)
-    id_queries = [torch.tensor(tokenized_query[0], dtype=torch.long) for i in range(default_ndocs)]
+    id_queries = [torch.tensor(tokenized_query[0], dtype=torch.long) for _ in range(default_ndocs)]
     id_docs = [torch.tensor(s, dtype=torch.long) for s in tokenized_docs]
     aux_preds, cls_preds, exp_preds = expred_predict(mtl_module, cls_module, id_queries, id_docs, docs_slice)
     exp_preds = merge_subtoken_exp_preds(exp_preds, docs_slice)
@@ -335,27 +372,38 @@ def counterfactual():
                            pred=cls_preds[0])
 
 
+def parse_user_mask(raw_orig_doc_html):
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(raw_orig_doc_html, 'html.parser')
+    doc, mask = [], []
+    for span in soup.find_all('span'):
+        doc.append(span.string)
+        mask.append(1 if 'ann-pos' in span['class'] else 0)
+    return ' '.join(doc), mask
+
+
 @app.route('/show_example', methods=['GET'])
 def show_example():
     orig_query = request.args.get('query').strip()
     orig_doc = request.args.get('doc').strip()
+    print(orig_doc)
     orig_label = request.args.get('label')
-    # print(len(orig_query), orig_query)
-    # print(len(orig_doc), orig_doc)
-    # print(orig_label)
-    # (
-    #     tokenized_query,
-    #     query_slice,
-    #     tokenized_docs,
-    #     docs_slice,
-    #     docs_split
-    # ) = preprocess(orig_query, [orig_doc], tokenizer, basic_tokenizer, 1, max_sentence)
-    # [0] for there is only one query and only 1 doc for the counterfactual generation
-    # queries = [torch.tensor(tokenized_query[0], dtype=torch.long)]
-    # docs = [torch.tensor(tokenized_docs[0], dtype=torch.long)]
     cls_label = torch.LongTensor(class_names.index(orig_label))
     hotflip_res = get_hotflip(orig_query, orig_doc, cls_label, top_pos)
     return render_template('show_example.html', hotflip_res=hotflip_res)
+
+
+@app.route('/doc_history', methods=['GET'])
+def doc_history():
+    orig_query = request.args.get('query').strip()
+    raw_orig_doc_html = request.args.get('masked_raw_html').strip()
+    orig_label = request.args.get('label')
+    orig_doc, user_mask = parse_user_mask(raw_orig_doc_html)
+    orig_doc = orig_doc.strip()
+    user_mask = [user_mask]
+    cls_label = torch.LongTensor(class_names.index(orig_label))
+    hotflip_res = get_hotflip(orig_query, orig_doc, cls_label, top_pos, user_mask)
+    return render_template('doc_history.html', hotflip_res=hotflip_res)
 
 
 @app.route('/doc-history', methods=['GET'])
@@ -372,8 +420,8 @@ def query_history():
     # [0] for there is only one query and only 1 doc for the counterfactual generation
     queries = [torch.tensor(tokenized_query[0], dtype=torch.long)]
     docs = [torch.tensor(tokenized_docs[0], dtype=torch.long)]
-    cls_preds = cls_pred(cls_module, queries, docs)
-    return render_template('doc-history.html', doc_history=[orig_doc], preds=cls_preds)
+    cls_preds = cls_predict(cls_module, queries, docs)
+    return render_template('doc_history.html', doc_history=[orig_doc], preds=cls_preds)
 
 
 if __name__ == "__main__":
