@@ -12,6 +12,8 @@ COPY faxplain/ /faxplain
 RUN apt-get update
 #RUN apt-get install -y libc-dev curl build-essential python-pip gunicorn3 locales locales-all
 RUN apt-get install -y gunicorn3 locales locales-all
+RUN apt-get remove python
+RUN apt-get install -y python3.8
 ENV LC_ALL en_US.UTF-8
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US.UTF-8

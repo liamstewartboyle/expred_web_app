@@ -5,7 +5,7 @@ import os
 from transformers import BertTokenizer
 
 # from expred.models.pipeline.bert_pipeline import bert_intern_doc
-from utils import Evidence, Annotation
+from eraser_utils import Evidence, Annotation
 
 
 class BertTokenizerWithMapping(BertTokenizer):

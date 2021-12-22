@@ -24,3 +24,73 @@ def dump_quel(fname, query, urls, docs, exps, labels, mode='a+'):
             assert len(doc[0]) == len(exp)
             writer = csv.writer(fout)
             writer.writerow([query, url, list(zip(doc[0], exp)), label])
+
+
+def highlight_exp_pred(exp, doc, highlight='yellow', shorten=True):
+    ret = ''
+    abrcount = 0
+    abrflag = False  # for abbreviation
+    for e, w in zip(exp, doc[0]):
+        if e == 1:
+            if highlight == 'bold':
+                ret += f'<b class="token">{w}&nbsp;</b>'
+            else:
+                ret += f'<span style="background-color:#FFFF00; float: left">{w}&nbsp;</span>'
+            abrcount = 0
+            abrflag = False
+        else:
+            if abrflag:
+                continue
+            abrcount += 1
+            if abrcount > 4 and shorten:
+                abrflag = True
+                ret += f'<span class=“token”>...&nbsp;</span>'
+            else:
+                ret += f'<span class="token">{w}&nbsp;</span>'
+    return ret
+
+
+def color_cls_pred(c,
+                   pos_label='SUPPORTS', pos_color='green',
+                   neg_label='REFUTES', neg_color='red',
+                   default_color='gray'):
+    color = default_color
+    if c == pos_label:
+        color = pos_color
+    elif c == neg_label:
+        color = neg_color
+    return f'<p style="color:{color};">{c}</p>'
+
+
+def machine_rationale_mask_to_html(cls_preds, exp_preds, docs_clean, urls):
+    cls_strs = [color_cls_pred(c) for c in cls_preds]
+    evi_strs = [highlight_exp_pred(exp, doc) for exp, doc in zip(exp_preds, docs_clean)]
+    urls = [url.split('/')[-1] for url in urls]
+    pred = {
+        'clses': cls_strs,
+        'evis': evi_strs,
+        'links': urls
+    }
+    return pred
+
+
+def parse_user_mask(raw_orig_doc_html):
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(raw_orig_doc_html, 'html.parser')
+    doc, mask = [], []
+    for span in soup.find_all('span'):
+        doc.append(span.string)
+        mask.append(1 if 'ann-pos' in span['class'] else 0)
+    return ' '.join(doc), mask
+
+
+def random_select_data(data, docs):
+    # k = random.choice(list(data.keys()))
+    k = 'negR_260.txt'
+    selected_ann = data[k]
+    # print("key: ", k)
+    ann_id = selected_ann.ann_id
+    docid = selected_ann.docid
+    doc = docs[docid]
+    query = selected_ann.query
+    return ann_id, query, doc

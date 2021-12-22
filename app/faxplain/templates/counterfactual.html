@@ -69,10 +69,10 @@
         let sent = $(this).text()
         $.ajax({
             url: "/show_example",
-            type: "get",
-            data: {query: "{{ query }}",
+            type: "post",
+            data: JSON.stringify({query: "{{ query }}",
                    doc: sent,
-                   label: "{{ label }}",},
+                   label: "{{ label }}",}),
             success: function(response) {
                     $("#example").html(response);
                     $("#user-choice").css('display', "inherit");
@@ -88,10 +88,11 @@
         let masked_raw_html = $('#selected-sentence').html()
         $.ajax({
             url: "/doc_history",
-            type: "get",
-            data: {query: "{{ query }}",
+            type: "post",
+            contentType: "application/json;charset=UTF-8",
+            data: JSON.stringify({query: "{{ query }}",
                    masked_raw_html: masked_raw_html,
-                   label: "{{ label }}",},
+                   label: "{{ label }}",}),
             success: function(response) {
                     $("#query-history").html(response);
                 },
