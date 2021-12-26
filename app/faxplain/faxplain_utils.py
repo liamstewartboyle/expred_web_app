@@ -1,4 +1,5 @@
 import csv
+from typing import Dict, Union, List
 
 
 def restore_from_temp(temp_fname, idxs=None):
@@ -74,14 +75,17 @@ def machine_rationale_mask_to_html(cls_preds, exp_preds, docs_clean, urls):
     return pred
 
 
-def parse_user_mask(raw_orig_doc_html):
+def parse_sentence(raw_orig_doc_html, ret_custom_mask=False)->Dict[str, Union[str, List[int]]]:
     from bs4 import BeautifulSoup
     soup = BeautifulSoup(raw_orig_doc_html, 'html.parser')
-    doc, mask = [], []
+    ret = {'doc': [],
+           'mask': []}
     for span in soup.find_all('span'):
-        doc.append(span.string)
-        mask.append(1 if 'ann-pos' in span['class'] else 0)
-    return ' '.join(doc), mask
+        ret['doc'].append(span.string)
+        if ret_custom_mask:
+            ret['mask'].append(1 if 'ann-pos' in span['class'] else 0)
+    ret['doc'] = ' '.join(ret['doc'])
+    return ret
 
 
 def random_select_data(data, docs):

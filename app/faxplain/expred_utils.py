@@ -16,21 +16,23 @@ def preprocess_query(query, tokenizer):
     return tokenized_q, query_slice
 
 
-def preprocess(query:str, docs:List[str], tokenizer, basic_tokenizer, top, max_sentence, custom_masks:List[List[int]]=None):
-    tokenized_q, query_slice = preprocess_query(query, tokenizer)
-    docs_split = [[basic_tokenizer.tokenize(d)] for d in docs]
-    tokenized_docs, docs_slice = tokenizer.encode_docs([doc[:max_sentence] for doc in docs_split])
-    tokenized_docs = [list(chain.from_iterable(tokenized_docs[i])) for i in range(top)]
+def preprocess(query:str, docs:List[str], tokenizer, basic_tokenizer, top, max_sentence):#, custom_masks:List[List[int]]=None):
+    encoded_query, query_slice = preprocess_query(query, tokenizer)
+    tokenized_docs = [[basic_tokenizer.tokenize(d)] for d in docs]
+    encoded_docs, docs_slice = tokenizer.encode_docs([doc[:max_sentence] for doc in tokenized_docs])
+    encoded_docs = [list(chain.from_iterable(encoded_docs[i])) for i in range(top)]
     docs_slice = [list(chain.from_iterable(docs_slice[i])) for i in range(top)]
-    if custom_masks:
-        mask_ret =  []
-        for slices, mask in zip(docs_slice, custom_masks):
-            mask_ret.append([])
-            for s, m in zip(slices, mask):
-                mask_ret[-1] += [m] * (s[1] - s[0])
-    else:
-        mask_ret = None
-    return tokenized_q, query_slice, tokenized_docs, docs_slice, docs_split, mask_ret
+    # if custom_masks:
+    #     mask_ret =  []
+    #     for slices, mask in zip(docs_slice, custom_masks):
+    #         mask_ret.append([])
+    #         for s, m in zip(slices, mask):
+    #             mask_ret[-1] += [m] * (s[1] - s[0])
+    # else:
+    #     mask_ret = None
+    encoded_query = torch.tensor(encoded_query, dtype=torch.long)
+    encoded_docs = [torch.tensor(d, dtype=torch.long) for d in encoded_docs]
+    return encoded_query, query_slice, encoded_docs, docs_slice, tokenized_docs
 
 
 def extract_docs_masks(queries, docs, masks):
@@ -48,9 +50,9 @@ def apply_masks_to_docs(queries:List[torch.Tensor],
                         docs:List[torch.Tensor],
                         masks:List[torch.Tensor],
                         tokenizer,
-                        input_max_length,
+                        input_max_length=512,
                         wildcard='.'):
-    encoded_wildcard = tokenizer.convert_tokens_to_ids('.')
+    encoded_wildcard = tokenizer.convert_tokens_to_ids(wildcard)
     doc_max_len = input_max_length - 2 - len(queries[0])
     docs = [d[:doc_max_len] if len(d) >= doc_max_len
             else torch.cat([d, torch.zeros(doc_max_len - len(d)).type(torch.int64)])
@@ -72,6 +74,9 @@ def merge_subtoken_exp_preds(exp_preds, subtoken_mapping):
 
 
 def mtl_predict(exp_module:BertMTL, queries, docs, tokenizer):
+    if not isinstance(queries, list):
+        queries = [queries]
+
     with torch.no_grad():
         exp_module.eval()
         max_length = min(max(map(len, docs)) + 2 + len(queries[0]), 512)

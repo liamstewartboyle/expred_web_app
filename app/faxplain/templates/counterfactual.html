@@ -2,11 +2,14 @@
 <html lang="en">
 <head>
     <link rel="stylesheet" type="text/css" href="../static/styles/counterfactual.css"/>
+    <script src='../static/counterfactual.js'></script>
     <meta charset="UTF-8">
     <title>Counterfactual Assistant</title>
 <!--    <script src="{{ url_for('static', filename='counterfactual.js') }}"></script> -->
     <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
     <script src="https://code.jquery.com/ui/1.13.0/jquery-ui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+
 </head>
 <body>
 <div>Awsome introduction</div>
@@ -23,7 +26,7 @@
             <i>
             <span style="display: block">
                 {% for sent in orig_doc %}
-                    <span class="sentence" style=" ">
+                    <span class="sentence">
                         {{ sent|safe|escape }}
                     </span>
                 {% endfor %}
@@ -32,13 +35,50 @@
         </span>
     </div>
 
+    <script src='../static/components/initial_doc.js'></script>
     <div class='user_generated' style="margin-left: 10px;margin-right: 20px;">
+
 {#        <h2>Try to <b>flip</b> the prediction by replacing words without changing the meaning of the sentence:</h2>#}
         <span id="example"></span>
 
         <div id="user-choice" style="display: none">
         <h2 style="color: #007fff">Your choice:</h2>
-            <p><button id="apply-mask" type="button" name="predict-mask">Apply this mask!</button></p>
+            <form>
+                <label for="masks">Masking strategy:</label>
+                <select name="masks" id="masks">
+                    <option value="expred">ExPred</option>
+                    <option value="custom">Custom</option>
+                </select>
+                <label for="attrs">Attribution Strategy:</label>
+                <select name="attrs" id="attrs">
+                    <optgroup label="Gradient-based">
+                        <option value="taylor_pos">Taylor Expansion (HotFlip)</option>
+                        <option value="gradient">Gradient Attribution</option>
+                    </optgroup>
+                    <optgroup label="Hierarchical">
+                        <option value="hierarchical">Hierarchical importance</option>
+                    </optgroup>
+                    <optgroup label="Attention-based">
+                        <option value="att">Attention score</option>
+                    </optgroup>
+                </select>
+                <br>
+                <input type="checkbox" id="gramma_res" name="gramma_res"><label for="gramma_res">Grammatical restriction</label>
+                <input type="checkbox" id="ins" name="ins"><label for="ins">Insertion</label>
+                <input type="checkbox" id="del" name="del"><label for="del">Deletion</label>
+                <br>
+                <label for="new_words">Replacement Retrieving Strategy:</label>
+                <select name="new_words" id="new_words">
+                    <optgroup label="Gradient-based">
+                        <option value="taylor_word">Taylor Expansion (HotFlip)</option>
+                    </optgroup>
+                    <optgroup label="Masked-model-based">
+                        <option value="ptuning">P-Tuning</option>
+                        <option value="t5">T5 model</option>
+                    </optgroup>
+                </select>
+            </form>
+            <p><button id="apply-mask" type="button" name="predict-mask">Apply</button></p>
             <!--<p>
                 <input id='counterfactual-suggestion' type="text">
                 <button id='ask-bert' type="button" name="predict">Ask BERT!</button>
@@ -49,7 +89,7 @@
 
 </div>
 <script>
-    $("#ask-bert").click(function() {
+    /*$("#ask-bert").click(function() {
         let ct = $(this).siblings('#counterfactual-suggestion').val()
         $.ajax({
             url: "/doc-history",
@@ -64,43 +104,8 @@
                 //Do Something to handle error
             }
         });
-    });
-    $(".sentence").click(function() {
-        let sent = $(this).text()
-        $.ajax({
-            url: "/show_example",
-            type: "post",
-            data: JSON.stringify({query: "{{ query }}",
-                   doc: sent,
-                   label: "{{ label }}",}),
-            success: function(response) {
-                    $("#example").html(response);
-                    $("#user-choice").css('display', "inherit");
-                    $("#query-history .user-chosen-content").remove();
-                },
-            error: function(xhr) {
-                //Do Something to handle error
-            }
-        });
-    });
-
-    $("#apply-mask").click(function() {
-        let masked_raw_html = $('#selected-sentence').html()
-        $.ajax({
-            url: "/doc_history",
-            type: "post",
-            contentType: "application/json;charset=UTF-8",
-            data: JSON.stringify({query: "{{ query }}",
-                   masked_raw_html: masked_raw_html,
-                   label: "{{ label }}",}),
-            success: function(response) {
-                    $("#query-history").html(response);
-                },
-            error: function(xhr) {
-                //Do Something to handle error
-            }
-        });
-    });
+    });*/
+    
 
 </script>
 
