@@ -1,19 +1,15 @@
-.token {
-    float: left;
-}
-
-.sentence {
-    margin-bottom: 5px;
-}
-
-span.sentence:hover>.token {background-color:yellow !important;}
-
-.sentiment {
-    width: 30px;
-    height: 30px;
-    align-self: center;
-}
-
 .ann-pos {
     font-weight: bold;
+}
+.sentence:hover {
+    background-color: yellow
+}
+.non-hover{
+    pointer-events: none;
+}
+.hidden {
+    display: hidden
+}
+.show {
+    display: unset
 }

@@ -2,93 +2,144 @@
 <html lang="en">
 <head>
     <link rel="stylesheet" type="text/css" href="../static/styles/counterfactual.css"/>
-    <script src='../static/counterfactual.js'></script>
     <meta charset="UTF-8">
     <title>Counterfactual Assistant</title>
-<!--    <script src="{{ url_for('static', filename='counterfactual.js') }}"></script> -->
+    <!-- JQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
     <script src="https://code.jquery.com/ui/1.13.0/jquery-ui.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <!-- VUE3 -->
+    <script src="https://unpkg.com/vue@3.0.11/dist/vue.global.js"></script>
+    <!-- BS5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
 </head>
 <body>
-<div>Awsome introduction</div>
-<div class="main", style="display: inline-flex">
-    <div id="#original", style="width: 50%;display:block;margin-left: 20px;margin-right: 10px;">
-        <span id="#original-input" style="display:block">
-            <h4 style="display: inline-flex">Query: <i>{{ query }}</i></h4>
-            <br>
-            <span style="display: inline-flex">
-                <h4>Label: </h4><img class='sentiment' src="{{ url_for('static', filename='imgs/' + label + '.png')  }}" alt="{{ label }}">
-                <h4>Pred: </h4><img class='sentiment' src="{{ url_for('static', filename='imgs/' + pred + '.png')  }}" alt="{{ pred }}">
-            </span>
-            <h3>Document and rationals:</h3>
-            <i>
-            <span style="display: block">
-                {% for sent in orig_doc %}
-                    <span class="sentence">
-                        {{ sent|safe|escape }}
-                    </span>
-                {% endfor %}
-            </span>
-            </i>
-        </span>
-    </div>
 
-    <script src='../static/components/initial_doc.js'></script>
-    <div class='user_generated' style="margin-left: 10px;margin-right: 20px;">
-
-{#        <h2>Try to <b>flip</b> the prediction by replacing words without changing the meaning of the sentence:</h2>#}
-        <span id="example"></span>
-
-        <div id="user-choice" style="display: none">
-        <h2 style="color: #007fff">Your choice:</h2>
-            <form>
-                <label for="masks">Masking strategy:</label>
-                <select name="masks" id="masks">
-                    <option value="expred">ExPred</option>
-                    <option value="custom">Custom</option>
-                </select>
-                <label for="attrs">Attribution Strategy:</label>
-                <select name="attrs" id="attrs">
-                    <optgroup label="Gradient-based">
-                        <option value="taylor_pos">Taylor Expansion (HotFlip)</option>
-                        <option value="gradient">Gradient Attribution</option>
-                    </optgroup>
-                    <optgroup label="Hierarchical">
-                        <option value="hierarchical">Hierarchical importance</option>
-                    </optgroup>
-                    <optgroup label="Attention-based">
-                        <option value="att">Attention score</option>
-                    </optgroup>
-                </select>
-                <br>
-                <input type="checkbox" id="gramma_res" name="gramma_res"><label for="gramma_res">Grammatical restriction</label>
-                <input type="checkbox" id="ins" name="ins"><label for="ins">Insertion</label>
-                <input type="checkbox" id="del" name="del"><label for="del">Deletion</label>
-                <br>
-                <label for="new_words">Replacement Retrieving Strategy:</label>
-                <select name="new_words" id="new_words">
-                    <optgroup label="Gradient-based">
-                        <option value="taylor_word">Taylor Expansion (HotFlip)</option>
-                    </optgroup>
-                    <optgroup label="Masked-model-based">
-                        <option value="ptuning">P-Tuning</option>
-                        <option value="t5">T5 model</option>
-                    </optgroup>
-                </select>
-            </form>
-            <p><button id="apply-mask" type="button" name="predict-mask">Apply</button></p>
-            <!--<p>
-                <input id='counterfactual-suggestion' type="text">
-                <button id='ask-bert' type="button" name="predict">Ask BERT!</button>
-            </p>-->
-        <div id="query-history"></div>
+<div class='container-fluid'>
+    <div class='navbar navbar-expand-lg bg-primary'>
+        <div class='container-fluid'>
+            <!-- links -->
+            <ul class='navbar-nav'>
+                <li class='nav-item'>
+                    <a class='nav-link text-white' href='/'>FaxPlain</a>
+                </li>
+                <li class='nav-item'>
+                    <a class='nav-link text-white' href='/counterfactual'>Counter-Assist</a>
+                </li>
+            </ul>
         </div>
     </div>
 
+    <div class='container mt-3' id='app'>
+        <p class='display-6'>
+            Awsome introduction
+        </p>
+        <initial-doc
+        :orig_doc="%%orig_doc%%"
+        :explains="%%explains%%"
+        :query="'%%query%%'"
+        :pred="'%%pred%%'"
+        :label="'%%label%%'"
+        :pos_img_url="'%%url_for('static', filename='imgs/POS.png')%%'"
+        :neg_img_url="'%%url_for('static', filename='imgs/NEG.png')%%'"
+        @select-sentence="forward_sentence"></initial-doc>
+        <div class='row'>
+            <div class='col-sm p-2'>
+                <div class="main">
+                    <!-- import app -->
+                    <script src="%% url_for('static', filename='counterfactual.js') %%"></script>
+                    <!--<initial-doc
+                        :orig_doc="%%orig_doc%%"
+                        :explains="%%explains%%"
+                        :query="'%%query%%'"
+                        :pred="'%%pred%%'"
+                        :label="'%%label%%'"
+                        :pos_img_url="'%%url_for('static', filename='imgs/POS.png')%%'"
+                        :neg_img_url="'%%url_for('static', filename='imgs/NEG.png')%%'"
+                        @select-sentence="forward_sentence"></initial-doc>-->
+                    <script src="%% url_for('static', filename='components/initial_doc.js') %%"></script>
+                </div>
+            </div>
+
+            <div class='col-sm p-2'>
+                <!-- <h2>Try to <b>flip</b> the prediction by replacing words without changing the meaning of the sentence:</h2> -->
+                <div 
+                    v-if="response.length > 0"
+                    class='user_generated'
+                    style="margin-left: 10px;margin-right: 20px;">
+                <span id="example"></span>
+
+            <div id="user-choice" style="display: none">
+                <p class='h2' style="color: #007fff">Your choice:</p>
+                <form>
+                    <class = 'row'>
+                        <div class='col-sm-3'>
+                            <label for="masks">Masking strategy:</label>
+                            <select class='form-select' name="masks" id="masks">
+                                <option value="expred">ExPred</option>
+                            <option value="custom">Custom</option>
+                            </select>
+                        </div>
+                        <div class='col-sm-3'>
+                            <label for="attrs">Attribution Strategy:</label>
+                            <select class='form-select' name="attrs" id="attrs">
+                                <optgroup label="Gradient-based">
+                                    <option value="taylor_pos">Taylor Expansion (HotFlip)</option>
+                                    <option value="gradient">Gradient Attribution</option>
+                                </optgroup>
+                                <optgroup label="Hierarchical">
+                                    <option value="hierarchical">Hierarchical importance</option>
+                                </optgroup>
+                                <optgroup label="Attention-based">
+                                    <option value="att">Attention score</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class='col-sm-3'>
+                            <label for="new_words">Replacement Retrieving Strategy:</label>
+                            <select class='form-select' name="new_words" id="new_words">
+                                <optgroup label="Gradient-based">
+                                    <option value="taylor_word">Taylor Expansion (HotFlip)</option>
+                                </optgroup>
+                                <optgroup label="Masked-model-based">
+                                    <option value="ptuning">P-Tuning</option>
+                                    <option value="t5">T5 model</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                    <div class='row'>
+                        <div class='col-sm-3'>
+                            <input class='form-check-input' type="checkbox" id="gramma_res" name="gramma_res">
+                            <label for="gramma_res"> Grammatical restriction </label>
+                        </div>
+                        <div class='col-sm-3'>
+                            <input class='form-check-input' type="checkbox" id="ins" name="ins">
+                            <label for="ins">Insertion</label>
+                        </div>
+                        <div class='col-sm-3'>
+                            <input class='form-check-input' type="checkbox" id="del" name="del">
+                            <label for="del">Deletion</label>
+                        </div>
+                    </div>
+                    <div class='row'>
+                        <div class='col-sm-1'>
+                            <button class='btn btn-dark' id="apply-mask" type="button" name="predict-mask">Apply</button>
+                        </div>
+                    </div>
+                </form>
+                <!--<p>
+                    <input id='counterfactual-suggestion' type="text">
+                    <button id='ask-bert' type="button" name="predict">Ask BERT!</button>
+                </p>-->
+            <div id="query-history"></div>
+            </div>
+        </div>
+
 </div>
+
 <script>
+    const mountedApp = app.mount('#app')
     /*$("#ask-bert").click(function() {
         let ct = $(this).siblings('#counterfactual-suggestion').val()
         $.ajax({

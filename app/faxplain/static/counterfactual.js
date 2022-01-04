@@ -1,29 +1,66 @@
-var app = new Vue({
-    data: {
-
-    }
-    
-})
-$(".sentence").click(function() {
-    let sent = $(this).text()
-    $.ajax({
-        url: "/show_example",
-        type: "post",
-        contentType: "application/json;charset=UTF-8",
-        data: JSON.stringify({
-            query: "{{ query }}",
-            doc: sent,
-            label: "{{ label }}",}),
-        success: function(response) {
-                $("#example").html(response);
-                $("#user-choice").css('display', "inherit");
-                $("#query-history .user-chosen-content").remove();
-            },
-        error: function(xhr) {
-            //Do Something to handle error
+const app = Vue.createApp({
+    data() {
+        return {
+            orig_doc: '',
+            explains: '',
+            query: '',
+            pred: '',
+            label: '',
+            response: ''
         }
-    });
+    },
+    methods: {
+        forward_sentence(query, sentence, label) {
+            $.ajax({
+                url: "/show_example",
+                type: "post",
+                contentType: "application/json;charset=UTF-8",
+                data: JSON.stringify({
+                    query: query,
+                    doc: sentence,
+                    label: label,
+                    use_custom_mask: false,
+                    position_scoring_method: 'gradient',
+                    word_scoring_method: 'gradient',
+                    gramma: false
+                    }),
+                success: function(response) {
+                    this.response = response
+                }
+            });
+        }
+    },
+    // created: async function(){;
+    //     var apiEndpoint = window.location.href
+    //     const gResponse = await fetch(apiEndpoint + '-init')
+    //     const gObject = await gResponse.json();
+    //     this.orig_doc = gObject.orig_doc;
+    //     this.query = gObject.query;
+    //     this.explains = gObject.explains;
+    //     this.pred = gObject.pred;
+    //     this.label = gObject.label;
+    // }
 });
+// $(".sentence").click(function() {
+//     let sent = $(this).text()
+//     $.ajax({
+//         url: "/show_example",
+//         type: "post",
+//         contentType: "application/json;charset=UTF-8",
+//         data: JSON.stringify({
+//             query: "{{ query }}",
+//             doc: sent,
+//             label: "{{ label }}",}),
+//         success: function(response) {
+//                 $("#example").html(response);
+//                 $("#user-choice").css('display', "inherit");
+//                 $("#query-history .user-chosen-content").remove();
+//             },
+//         error: function(xhr) {
+//             //Do Something to handle error
+//         }
+//     });
+// });
 
 $("#apply-mask").click(function() {
     let masked_raw_html = $('#selected-sentence').html();

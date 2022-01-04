@@ -88,13 +88,3 @@ def parse_sentence(raw_orig_doc_html, ret_custom_mask=False)->Dict[str, Union[st
     return ret
 
 
-def random_select_data(data, docs):
-    # k = random.choice(list(data.keys()))
-    k = 'negR_260.txt'
-    selected_ann = data[k]
-    # print("key: ", k)
-    ann_id = selected_ann.ann_id
-    docid = selected_ann.docid
-    doc = docs[docid]
-    query = selected_ann.query
-    return ann_id, query, doc
