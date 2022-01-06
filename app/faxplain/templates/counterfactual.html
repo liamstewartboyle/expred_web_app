@@ -20,6 +20,28 @@
 </head>
 <body>
 
+<div >
+    <div class="modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Annotation done</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Annotation is done.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" href='/counterfactual'>Next</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Quit</button>
+            </div>
+            </div>
+        </div>
+    </div>
+</div>
+    
 <div class='navbar navbar-expand-lg bg-primary'>
     <div class='container-fluid'>
         <!-- links -->
@@ -36,18 +58,18 @@
 <div class='container-fluid'>
 
     <div class='container-fluid pt-3' style='background: #f7f8f9!important' id='app'>
-        <div class='mb-1'>
-            <a class='display-7' data-bs-toggle='collapse' href='#introduction'>
-                Introduction...
-            </a>
-            <div class='collapse' id='introduction'>
-                <div class='card card-body'>
-                    Place holder for the introduction.
-                </div>
-            </div>
-        </div>
         <div class='row'>
             <div class='col-sm'>
+                <div class='mb-1'>
+                    <a class='display-7' data-bs-toggle='collapse' href='#introduction'>
+                        Introduction...
+                    </a>
+                    <div class='collapse' id='introduction'>
+                        <div class='card card-body'>
+                            Place holder for the introduction.
+                        </div>
+                    </div>
+                </div>
                 <initial-doc
                 :orig_doc="%%orig_doc%%"
                 :explains="%%explains%%"
@@ -55,96 +77,32 @@
                 :pred="'%%pred%%'"
                 :label="'%%label%%'"
                 :pos_img_url="'%%url_for('static', filename='imgs/POS.png')%%'"
-                :neg_img_url="'%%url_for('static', filename='imgs/NEG.png')%%'"
-                @select-sentence="forward_sentence"></initial-doc>
+                :neg_img_url="'%%url_for('static', filename='imgs/NEG.png')%%'"></initial-doc>
                 <script src="%% url_for('static', filename='counterfactual.js') %%"></script>
                 <script src="%% url_for('static', filename='components/initial_doc.js') %%"></script>
             </div>
             
             <div class='col-sm'>
-                <div class='container-fluid card card-body'>
-                    <div class='h5'> Clear User Guidance </div>
-                    <div class='h5' v-if="is_cf_example_loading">Loading...</div>
-                    <script src="%%url_for('static', filename='components/show_examples.js')%%"></script>
-                    <div class="counterfactual-rec row">
-                        <div v-show='is_cf_example_ready' class='h5 row'>Example:</div>
-                        <div v-if='is_cf_example_ready'>
-                            <show-examples 
-                                :pos_img_url="'%%url_for('static', filename='imgs/POS.png')%%'"
-                                :neg_img_url="'%%url_for('static', filename='imgs/NEG.png')%%'"
-                                :cf_examples='cf_examples'>
-                            </show-examples>
-                        </div>
-                        <div v-else></div>
-                    </div>
-                    <div class="restrictions row">
-                    </div>
+                <script src="%%url_for('static', filename='components/show_examples.js')%%"></script>
+                <div class='h5' v-show="is_cf_example_loading">Loading...</div>
+                <div v-if='is_cf_example_ready'>
+                    <show-examples 
+                        :pos_img_url="'%%url_for('static', filename='imgs/POS.png')%%'"
+                        :neg_img_url="'%%url_for('static', filename='imgs/NEG.png')%%'"
+                        :cf_examples='cf_examples'
+                        :query="'%%query%%'"
+                        :label="'%%label%%'">
+                    </show-examples>
                 </div>
+                <div v-else></div>
+                </div>
+                <div class="restrictions row">
+                </div>
+            </div>
 
-                <!--<div 
-                    v-show="is_loading"
-                    class='user_generated'>
-                    <span id="example">Example</span>
-                </div>-->
+                
                 <!--
-                    <div id="user-choice" style="display: none">
-                        <p class='h2' style="color: #007fff">Your choice:</p>
-                        <form>
-                            <class = 'row'>
-                                <div class='col-sm-3'>
-                                    <label for="masks">Masking strategy:</label>
-                                    <select class='form-select' name="masks" id="masks">
-                                        <option value="expred">ExPred</option>
-                                    <option value="custom">Custom</option>
-                                    </select>
-                                </div>
-                                <div class='col-sm-3'>
-                                    <label for="attrs">Attribution Strategy:</label>
-                                    <select class='form-select' name="attrs" id="attrs">
-                                        <optgroup label="Gradient-based">
-                                            <option value="taylor_pos">Taylor Expansion (HotFlip)</option>
-                                            <option value="gradient">Gradient Attribution</option>
-                                        </optgroup>
-                                        <optgroup label="Hierarchical">
-                                            <option value="hierarchical">Hierarchical importance</option>
-                                        </optgroup>
-                                        <optgroup label="Attention-based">
-                                            <option value="att">Attention score</option>
-                                        </optgroup>
-                                    </select>
-                                </div>
-                                <div class='col-sm-3'>
-                                    <label for="new_words">Replacement Retrieving Strategy:</label>
-                                    <select class='form-select' name="new_words" id="new_words">
-                                        <optgroup label="Gradient-based">
-                                            <option value="taylor_word">Taylor Expansion (HotFlip)</option>
-                                        </optgroup>
-                                        <optgroup label="Masked-model-based">
-                                            <option value="ptuning">P-Tuning</option>
-                                            <option value="t5">T5 model</option>
-                                        </optgroup>
-                                    </select>
-                                </div>
-                            <div class='row'>
-                                <div class='col-sm-3'>
-                                    <input class='form-check-input' type="checkbox" id="gramma_res" name="gramma_res">
-                                    <label for="gramma_res"> Grammatical restriction </label>
-                                </div>
-                                <div class='col-sm-3'>
-                                    <input class='form-check-input' type="checkbox" id="ins" name="ins">
-                                    <label for="ins">Insertion</label>
-                                </div>
-                                <div class='col-sm-3'>
-                                    <input class='form-check-input' type="checkbox" id="del" name="del">
-                                    <label for="del">Deletion</label>
-                                </div>
-                            </div>
-                            <div class='row'>
-                                <div class='col-sm-1'>
-                                    <button class='btn btn-dark' id="apply-mask" type="button" name="predict-mask">Apply</button>
-                                </div>
-                            </div>
-                        </form>
+                    
                         <!--<p>
                             <input id='counterfactual-suggestion' type="text">
                             <button id='ask-bert' type="button" name="predict">Ask BERT!</button>

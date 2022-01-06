@@ -232,13 +232,16 @@ def counterfactual():
 @app.route('/show_example', methods=['GET', 'POST'])
 def show_example():
     cf_config.update_config_from_ajax_request(request)
-    
     cf_input = CounterfactualInput.from_ajax_request(request, basic_tokenizer, cf_config)
     cf_input.preprocess(span_tokenizer)
+    cf_input.update_custom_masks_from_ajax_request(request)
 
     cf_examples = counter_assist.geneate_counterfactuals(cf_input, span_tokenizer)
     return {"cf_examples": cf_examples}
 
+@app.route('/reg_eval', methods=['POST'])
+def register_evaluation():
+    return {'placeholder': None}
 
 # @app.route('/doc_history', methods=['POST'])
 # def doc_history():

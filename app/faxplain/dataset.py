@@ -29,8 +29,8 @@ class Dataset():
         self.docs = load_documents(dataset_dir)
         
     def random_select_data(self, basic_tokenizer:BasicTokenizer) -> CounterfactualInput:
-        ann_id = random.choice(list(self.raw_data.keys()))
-        # ann_id = 'negR_260.txt'
+        # ann_id = random.choice(list(self.raw_data.keys()))
+        ann_id = 'negR_260.txt'
         selected_ann = self.raw_data[ann_id]
         docid = selected_ann.docid
        

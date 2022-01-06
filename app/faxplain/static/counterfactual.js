@@ -8,18 +8,26 @@ const app = Vue.createApp({
             label: '',
             cf_examples: [],
             is_cf_example_loading: false,
-            is_cf_example_ready: false
+            is_cf_example_ready: false,
+            is_annotation_done: false
         }
     },
     mounted(){
         this.eventBus.on('select-sentence', (evt) => {
-            is_cf_example_loading = true
-            is_cf_example_ready = false
+            this.is_cf_example_loading = true
+            this.is_cf_example_ready = false
+            use_custom_mask = false
+            custom_mask = undefined
+            if (evt.hasOwnProperty('mask') && !(typeof evt['mask'] === "undefined") ) {
+                use_custom_mask = true
+                custom_mask = evt['mask']
+            }
             let data = {
                 query: evt['query'],
                 doc: evt['sentence'],
                 label: evt['label'],
-                use_custom_mask: false,
+                use_custom_mask: use_custom_mask,
+                custom_mask: custom_mask,
                 position_scoring_method: 'gradient',
                 word_scoring_method: 'gradient',
                 gramma: false
@@ -34,63 +42,23 @@ const app = Vue.createApp({
                 .catch(error => {
                     console.log(error)
                 })
+        });
+        this.eventBus.on('evaluation_done', (data) =>{
+            let url = "/reg_eval"
+            axios.post(url, data)
+                .then(response => {
+                    this.is_cf_example_loading = false
+                    this.is_cf_example_ready = false
+                    this.is_annotation_done = true
+                })
+                .catch(error => {
+                    console.log(error)
+                })
         })
     },
     methods: {
-        // forward_sentence(query, sentence, label) {
-        //     is_loading = true
-        //     console.log(is_loading)
-        //     $.ajax({
-        //         url: "/show_example",
-        //         type: "post",
-        //         contentType: "application/json;charset=UTF-8",
-        //         data: JSON.stringify({
-        //             query: query,
-        //             doc: sentence,
-        //             label: label,
-        //             use_custom_mask: false,
-        //             position_scoring_method: 'gradient',
-        //             word_scoring_method: 'gradient',
-        //             gramma: false
-        //             }),
-        //         success: function(response) {
-        //             is_loading = false
-        //             cf_examples = response['cf_examples']
-        //         }
-        //     });
-        // }
     },
-    // created: async function(){;
-    //     var apiEndpoint = window.location.href
-    //     const gResponse = await fetch(apiEndpoint + '-init')
-    //     const gObject = await gResponse.json();
-    //     this.orig_doc = gObject.orig_doc;
-    //     this.query = gObject.query;
-    //     this.explains = gObject.explains;
-    //     this.pred = gObject.pred;
-    //     this.label = gObject.label;
-    // }
 });
-// $(".sentence").click(function() {
-//     let sent = $(this).text()
-//     $.ajax({
-//         url: "/show_example",
-//         type: "post",
-//         contentType: "application/json;charset=UTF-8",
-//         data: JSON.stringify({
-//             query: "{{ query }}",
-//             doc: sent,
-//             label: "{{ label }}",}),
-//         success: function(response) {
-//                 $("#example").html(response);
-//                 $("#user-choice").css('display', "inherit");
-//                 $("#query-history .user-chosen-content").remove();
-//             },
-//         error: function(xhr) {
-//             //Do Something to handle error
-//         }
-//     });
-// });
 
 // $("#apply-mask").click(function() {
 //     let masked_raw_html = $('#selected-sentence').html();

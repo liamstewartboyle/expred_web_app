@@ -1,4 +1,6 @@
 from itertools import chain
+from os import supports_bytes_environ
+import re
 from typing import Any, List, Tuple, Type, Union
 
 import torch
@@ -23,7 +25,8 @@ class ExpredInput():
     def class_name_to_id(self, name):
         return self.class_names.index(name)
     
-    def encode(self, inputs:Union[List[str], List[List[str]]], tokenizer:BertTokenizerWithSpans):
+    @classmethod
+    def encode(cls, inputs:Union[List[str], List[List[str]]], tokenizer:BertTokenizerWithSpans):
         encoded_inputs, input_spans = tokenizer.encode_docs_with_spans(inputs)            
         encoded_inputs = [torch.LongTensor(i) for i in encoded_inputs]
         return encoded_inputs, input_spans
@@ -50,7 +53,7 @@ class ExpredInput():
         self.actual_encoded_docs = actual_encoded_docs
         self.overhead_masks = torch.cat(overhead_masks, dim=0).type(torch.int)
         
-    def concat_queries_docs(self, tokenizer:BertTokenizerWithSpans):
+    def concat_queries_docs(self, tokenizer:BertTokenizerWithSpans) -> None:
         tokenized_res = tokenizer([' '.join(q) for q in self.orig_queries], [' '.join(d) for d in self.orig_docs],
                                  max_length=self.config.max_input_len,
                                  padding=True, truncation=True, return_tensors='pt')        
@@ -145,6 +148,9 @@ class ExpredInput():
             subtoken_doc_explain = subtoken_doc_explain.tolist()
             token_docs_explains.append(ExpredInput._pool_subtoken_explain(subtoken_doc_explain, subtoken_doc_spans))
         return token_docs_explains
+    
+    def concat_overead_subtoken_mask(self, subtoken_doc_mask):
+        return [1] * (len(self.encoded_queries[0]) + 2) + subtoken_doc_mask + [1]
 
     
 class CounterfactualInput(ExpredInput):
@@ -160,20 +166,11 @@ class CounterfactualInput(ExpredInput):
         super().__init__([query], [doc], [label], cf_config)
         if custom_doc_mask:
             self.custom_doc_masks = [custom_doc_mask]
-            self.custom_input_masks = self._concat_query_doc_masks()
-        
-    # def preprocess(self, tokenizer: BertTokenizerWithSpans, cf_conf: CountefactualConfig):
-    #     super().preprocess(tokenizer, cf_conf)
-    #     self.encoded_doc = self.encoded_docs[0]
-    #     self.subtoken_doc_spans = self.subtoken_docs_spans[0]
-        
-    #     self.encoded_query = self.encoded_queries[0]
-    #     self.subtoken_query_spans = self.subtoken_queries_spans[0]
-        
-    #     self.orig_label = self.orig_labels[0]
-    #     self.cls_label = self.cls_labels[0]
-        
-    #     self.attention_mask = self.attention_masks[0]
+            self.custom_input_masks = self.concat_overead_subtoken_mask(custom_doc_mask)
+    
+    def update_custom_masks(self, subtoken_doc_mask, subtoken_input_mask):
+        self.custom_doc_masks = torch.Tensor([subtoken_doc_mask])
+        self.custom_input_masks = torch.Tensor([subtoken_input_mask])
          
     def tile_attention_masks(self, top_poses):
         self.tiled_attention_masks = torch.tile(self.attention_masks, [1, top_poses]).reshape((top_poses, -1))
@@ -187,16 +184,24 @@ class CounterfactualInput(ExpredInput):
         return subtoken_doc_masks
         
     @classmethod
-    def _parse_custom_mask(cls, custom_mask_str:str) -> Tensor:
-        #TODO
-        # also notice that the input custom doc mask is token-wize, need to expand it to subtoken-wise
-        raise NotImplementedError
-    
-    @classmethod
     def _extract_custom_doc_mask(cls, request)->Union[List[int], Any]:
         if request.json['use_custom_mask']:
-            return cls._parse_custom_mask(request.json['custom_mask'])
+            return request.json['custom_mask']
         return None
+    
+    def expand_to_subtoken_mask(self, token_mask, subtoken_spans):
+        assert len(token_mask) == len(subtoken_spans)
+        ret = []
+        for mask, (start, end) in zip(token_mask, subtoken_spans):
+            ret += [mask] * (end - start)
+        return ret
+    
+    def update_custom_masks_from_ajax_request(self, request):
+        if request.json['use_custom_mask']:
+            custom_doc_mask = CounterfactualInput._extract_custom_doc_mask(request)
+            custom_subtoken_doc_mask = self.expand_to_subtoken_mask(custom_doc_mask, self.subtoken_docs_spans[0])
+            custom_subtoken_input_mask = self.concat_overead_subtoken_mask(custom_subtoken_doc_mask)
+            self.update_custom_masks(custom_subtoken_doc_mask, custom_subtoken_input_mask)
     
     @classmethod
     def from_ajax_request(cls, request, basic_tokenizer, cf_config):
@@ -204,5 +209,5 @@ class CounterfactualInput(ExpredInput):
         orig_doc = [request.json['doc']]
         orig_label = request.json['label']
 
-        custom_docs_mask = cls._extract_custom_doc_mask(request)
-        return CounterfactualInput(orig_query, orig_doc, orig_label, cf_config, custom_docs_mask)
+        cf_input = CounterfactualInput(orig_query, orig_doc, orig_label, cf_config)
+        return cf_input
