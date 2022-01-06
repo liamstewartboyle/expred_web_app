@@ -5,7 +5,6 @@ from torch import Tensor, nn
 
 from config import CountefactualConfig
 from expred.expred.models.mlp_mtl import CLSModel, MTLModel
-from expred.expred.params import CLSParameter, MTLParameter
 from inputs import ExpredInput
 
 # def mtl_predict(exp_module:MTLModel, queries, docs, tokenizer):
@@ -58,17 +57,15 @@ def fit_mask_to_decoded_docs(mask, tokens, tokenizer):
 class Expred(nn.Module):
     def __init__(self, cf_config:CountefactualConfig) -> None:
         super(Expred, self).__init__()
-        self.mtl_params = MTLParameter(cf_config)
-        self.mtl_module = MTLModel.from_pretrained(self.mtl_params)
-
-        self.cls_params = CLSParameter(cf_config)
-        self.cls_module = CLSModel.from_pretrained(self.cls_params)
+        self.mtl_module = MTLModel.from_pretrained(cf_config.mtl_config)
+        self.cls_module = CLSModel.from_pretrained(cf_config.cls_config)
 
     def forward(self, inputs:ExpredInput)->Tuple[Tensor, Tensor, Tensor]:
         mtl_preds = self.mtl_module(inputs.expred_inputs, inputs.attention_masks)
         aux_preds = mtl_preds['aux_preds']
         hard_exp_preds = torch.round(mtl_preds['exp_preds']).type(torch.int)
-        inputs.apply_masks_to_inputs(hard_exp_preds)
+        rationale_masks = inputs.select_all_overheads(hard_exp_preds)
+        inputs.apply_masks_to_inputs(rationale_masks)
         cls_preds = self.cls_module(inputs.masked_inputs, inputs.attention_masks)
         cls_preds = cls_preds['cls_preds']
         return aux_preds, cls_preds, hard_exp_preds

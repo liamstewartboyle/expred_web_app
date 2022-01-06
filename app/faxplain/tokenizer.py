@@ -2,6 +2,7 @@ from itertools import chain
 from typing import List, Dict, Tuple, Union
 
 import os
+from torch.functional import Tensor
 from transformers import BertTokenizer
 from transformers.models.bert.tokenization_bert import BasicTokenizer
 
@@ -45,6 +46,19 @@ class BertTokenizerWithSpans(BertTokenizer):
             sub_token_spans.append(spans)
         return encoded_docs, sub_token_spans
 
+    def decode(self, encoded:Tensor, spans:List[Tuple[int, int]]) -> List[str]:
+        ret = []
+        encoded = encoded.tolist()
+        for i, (start, end) in enumerate(spans):
+            token = ''
+            for j in range(start, end):
+                subtoken = self._convert_id_to_token(encoded[j])
+                if subtoken.startswith('##'):
+                    subtoken = subtoken[2:]
+                token += subtoken
+            ret.append(token)
+        return ret
+            
     def encode_annotations(self, annotations):
         ret = []
         for ann in annotations:

@@ -1,3 +1,5 @@
 *.pt
 tryouts/*
-faxplain/trained_models/
+faxplain/trained_models/*
+*__pycache__*
+

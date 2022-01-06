@@ -31,72 +31,90 @@ const initial_doc = app.component('initial-doc', {
     },
     data() {
         return {
-            show_full_doc: false
+            show_full_doc: false,
+            img_dir: {
+                'POS': this.pos_img_url,
+                "NEG": this.neg_img_url
+            }
         }
     },
     template:
     /*html*/
     `
-    <div class='container'>
-    <div class='row'>
-        <div class='col-sm-5'>
-            <div class='row'>
-                <div class='h3'>Query: <div class='fst-italic'>{{ query }}</div></div>
-            </div>
-            <button 
-                type='button'
-                class='btn btn-secondary p-2 mb-2 row'
-                v-on:click='toggle_show()'
-                id='toggle_show_button'>
-                Show all
-            </button>
-            <div
-                :style=" {'display': (show_full_doc ? 'block' : 'none')} "
-                class='full-doc row'>
-                <span 
-                    v-for="(s, i) in this.orig_doc"
-                    class='sentence'
-                    v-on:click='select_sentence(s)'>
-                    <template v-for="(token, j) in s">
-                    <span :class=" (explains[i][j] === 1) ? 'fw-bold' : 'fw-normal' ">
-                        {{ token }}
-                    </span>{{ ' ' }}
+    <div class='container-fluid card card-body mb-1'>
+        <div class='row'>
+            <div class='h5 col-md-auto'>query: </div>
+            <div class='h5 col'>{{ query }}</div>
+        </div>
+        <div class='row'>
+            <div class='h5 col-md-auto mt-1 mb-2'>pred: </div>
+            <img class='col-sm-auto mt-2 mb-2 img-fluid' :src='img_dir[this.pred]'/>
+            <div class='h5 col-md-auto mt-1 mb-2'>label: </div>
+            <img class='col-sm-auto mt-2 mb-2 img-fluid' :src='img_dir[this.label]'/>
+        </div>
+    </div>
+    <div class='container-fluid card card-body mb-1'>
+        <div class='row'>
+            <div class='col'>
+                <div
+                    :style=" {'display': (show_full_doc ? 'block' : 'none')} "
+                    class='full-doc'>
+                    <span 
+                        v-for="(s, i) in this.orig_doc"
+                        class='sentence'
+                        v-on:click='select_sentence(s)'>
+                        <template v-for="(token, j) in s">
+                        <span :class=" (explains[i][j] === 1) ? 'fw-bold' : 'fw-normal' ">
+                            {{ token }}
+                        </span>{{ ' ' }}
+                        </template>
+                    </span>
+                </div>
+                <div 
+                    :style=" {'display': (show_full_doc ? 'none' : 'block')}"
+                    class='doc-rat'>
+                    <template v-for='(s, i) in this.orig_doc'>
+                        <template v-if='len(explains[i])>0'>
+                            <span
+                                class='sentence'
+                                v-on:click='select_sentence(s)'>
+                                <template v-for='(token, j) in s'>
+                                    <span :class=" (explains[i][j] === 1) ? 'fw-bold' : 'fw-noral' ">
+                                        {{ token }}
+                                    </span>{{ ' ' }}
+                                </template>
+                            </span>
+                        </template>
+                        <template v-else>
+                            <span>.</span>{{ ' ' }}
+                        </template>
                     </template>
-                </span>
-            </div>
-            <div 
-                :style=" {'display': (show_full_doc ? 'none' : 'block')}"
-                class='doc-rat row'>
-                <template v-for='(s, i) in this.orig_doc'>
-                    <template v-if='len(explains[i])>0'>
-                        <span
-                            class='sentence'
-                            v-on:click='select_sentence(s)'>
-                            <template v-for='(token, j) in s'>
-                                <span :class=" (explains[i][j] === 1) ? 'fw-bold' : 'fw-noral' ">
-                                    {{ token }}
-                                </span>{{ ' ' }}
-                            </template>
-                        </span>
-                    </template>
-                    <template v-else>
-                        <span>.</span>{{ ' ' }}
-                    </template>
-                </template>
+                </div>
             </div>
         </div>
+    </div>
+    <div class='row'>
+        <div class='col'>
+            <div  class=''>
+                <button 
+                    type='button'
+                    class='btn btn-primary'
+                    v-on:click='toggle_show()'
+                    id='toggle_show_button'>
+                    Expand all
+                </button>
+            </div>
         </div>
     </div>
     `,
     methods: {
         select_sentence(sentence) {
-            this.$emit('select-sentence', this.query, sentence, this.label)
-        },
-        get_img_src(label) {
-            if (label === 'POS') {
-                return this.pos_img_url
+            evt = {
+                query: this.query,
+                sentence: sentence,
+                label:this.label
             }
-            return this.neg_img_url
+            this.eventBus.emit('select-sentence', evt)
         },
         len(exp) {
            let total = [];

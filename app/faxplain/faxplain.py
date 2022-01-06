@@ -3,8 +3,8 @@ from typing import Counter, List
 
 from flask import Flask, redirect, render_template, request, url_for
 from transformers.models.bert.tokenization_bert import BasicTokenizer
+from config import CountefactualConfig
 
-from config import *
 from counter_assist import ExpredCounterAssist
 from dataset import Dataset
 from debug import get_bogus_pred
@@ -214,10 +214,10 @@ def counterfactual():
     
     _, cls_preds, exp_preds = expred(cf_input)
     cls_pred_id = cls_preds[0].tolist().index(max(cls_preds[0]))
-    cls_pred = cf_input.class_name[cls_pred_id]
+    cls_pred = cf_input.class_names[cls_pred_id]
 
     subtoken_doc_exp_preds = cf_input.extract_masks_for_subtoken_docs(exp_preds)
-    token_doc_exp_preds = cf_input.pool_subtoken_docs_explains(subtoken_doc_exp_preds)
+    token_doc_exp_preds = cf_input.pool_subtoken_docs_explations(subtoken_doc_exp_preds)
 
     sentence_wise_exps = cf_input.get_sentence_wise_exps(token_doc_exp_preds)
 
@@ -236,9 +236,8 @@ def show_example():
     cf_input = CounterfactualInput.from_ajax_request(request, basic_tokenizer, cf_config)
     cf_input.preprocess(span_tokenizer)
 
-    counterfactual_res = counter_assist.geneate_counterfactuals(cf_input)
-    
-    return render_template('show_example.html', hotflip_res=counterfactual_res)
+    cf_examples = counter_assist.geneate_counterfactuals(cf_input, span_tokenizer)
+    return {"cf_examples": cf_examples}
 
 
 # @app.route('/doc_history', methods=['POST'])
@@ -315,15 +314,15 @@ if False:
 else:
     print("Loading models")
 
-    bert_dir = 'bert-base-uncased'
-    span_tokenizer = BertTokenizerWithSpans.from_pretrained(bert_dir)
+    cf_config = CountefactualConfig()
+    
+    span_tokenizer = BertTokenizerWithSpans.from_pretrained(cf_config.bert_dir)
     basic_tokenizer = BasicTokenizer()
 
     expred = Expred(cf_config)
 
     dataset = Dataset(cf_config.dataset_name, cf_config.dataset_base_dir)
 
-    cf_config = CountefactualConfig()
 
     counter_assist = ExpredCounterAssist(cf_config, expred)
 

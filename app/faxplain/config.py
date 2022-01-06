@@ -1,59 +1,39 @@
 import os
-from torch import device
+from expred.expred.config import ExpredConfig
+
 
 application = 'counterfactual'
-
-class LoadableModelConfig():
-    def __init__(self, dataset_name)->None:
-        self.dataset_name = dataset_name
-        
-        
-class ExpredConfig(LoadableModelConfig):
-    def __init__(self, dataset_name) -> None:
-        super().__init__(dataset_name)
-        self.dataset_base_dir = os.environ.get('HOME') + '/.keras/datasets/'
-        self.device = device('cpu')
-        self.class_name = None
-        self.wildcard_token = '.'
-        self.max_input_len = 512
-        
+       
         
 class FaxplainConfig(ExpredConfig):
-    def __init__(self, dataset_name) -> None:
-        super().__init__(dataset_name)
-        
-        self.debug = False
-        
-        self.device = device('cpu')
-        
-        self.mtl_loc = './trained_models/fever/evidence_token_identifier.pt'
-        self.mtl_url = 'https://www.dropbox.com/s/qwinyap4kbxzdvn/evidence_token_identifier.pt?dl=1'
-        self.cls_loc = 'trained_models/fever/evidence_classifier.pt'
-        self.cls_url = 'https://www.dropbox.com/s/oc3qrgl0tqn9mqd/evidence_classifier.pt?dl=1'
-        self.class_names = ["SUPPORTS", "REFUTES"]
-        
-        
-class CountefactualConfig(ExpredConfig):
     def __init__(self) -> None:
-        super().__init__('movies')
+        super().__init__(dataset_name='fever',
+                         mtl_url='https://www.dropbox.com/s/qwinyap4kbxzdvn/evidence_token_identifier.pt?dl=1',
+                         cls_url='https://www.dropbox.com/s/oc3qrgl0tqn9mqd/evidence_classifier.pt?dl=1',
+                         class_names=["SUPPORTS", "REFUTES"])
+        self.load_from_pretrained = True
+
+
+class CountefactualConfig(ExpredConfig):
+    top_docs = 1
+    max_sentence = 30
+    max_count_word_replacement = 5
+    number_top_positions = 10
+    
+    bert_dir = 'bert-base-uncased'
         
-        self.evi_finder_url = 'https://www.dropbox.com/s/qen0vx2uz6ksn3m/evidence_token_identifier.pt?dl=1'
-        self.cls_url = 'https://www.dropbox.com/s/0sfrdykcg6cf6kh/evidence_classifier.pt?dl=1'
-        
-        self.class_name = ['NEG', 'POS']
-        
-        self.top_docs = 1
-        self.max_sentence = 30
-        self.max_count_word_replacement = 5
-        self.number_top_positions = 10
-        
-        self.position_scoring_method = 'gradient'
-        self.word_scoring_method = 'gradient'
-        self.constraints = {
-            'gramma': False,
-        }
-        
-        self.device = device('cpu')
+    position_scoring_method = 'gradient'
+    word_scoring_method = 'gradient'
+    constraints = {
+        'gramma': False,
+    }
+    
+    def __init__(self) -> None:
+        super().__init__(dataset_name='movies',
+                         mtl_url = 'https://www.dropbox.com/s/qen0vx2uz6ksn3m/evidence_token_identifier.pt?dl=1',
+                         cls_url = 'https://www.dropbox.com/s/0sfrdykcg6cf6kh/evidence_classifier.pt?dl=1',
+                         class_names=['NEG', 'POS'])
+        self.load_from_pretrained = True
 
     def update_config_from_ajax_request(self, request) -> None:
         self.position_scoring_method = request.json['position_scoring_method']
@@ -61,6 +41,3 @@ class CountefactualConfig(ExpredConfig):
         self.constraints = {
             'gramma': request.json['gramma'],
         }
-
-if application == 'counterfactual':
-    cf_config = CountefactualConfig()
