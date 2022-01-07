@@ -82,7 +82,7 @@ const show_examples = app.component('show-examples', {
             Place holder for the user guidance.
         </div>
     </div>
-    <div class='card container-fluid'>
+    <div class='card'>
         <div class="card-header">
             2. How do you like the counterfactuals?
         </div>
@@ -97,7 +97,7 @@ const show_examples = app.component('show-examples', {
                 <span class="rec-counter" id="selected-sentence">
                     <span v-for='(word, j) in cf_example["input"]'>
                         <span 
-                        v-bind:class='[{ "fw-bold": mask[j] === 1 }, { "mark": cf_example["replaced"] === j }]'>
+                        v-bind:class='[{ "fw-bold": mask[j] === 1 }, { "badge rounded-pill bg-warning text-dark": cf_example["replaced"] === j }]'>
                         {{ word }}
                         </span>{{' '}}
                     </span>
@@ -109,156 +109,157 @@ const show_examples = app.component('show-examples', {
 
             <hr/>
 
-            <div class='row'>
-                <button
-                    class='btn btn-success col ms-3 me-3'
-                    data-bs-toggle='collapse'
-                    href='#evaluate'
-                    @click='this.satisfy =! this.satisfy'>
-                    Looks nice, evaluate them
-                    <span v-if='this.satisfy'>
-                        <<<
-                    </span>
-                    <span v-else>
-                        >>>
-                    </span>
-                </button>
-            
-                <button 
-                    class='btn btn-danger col ms-3 me-3'
-                    data-bs-toggle='collapse' 
-                    href='#try-others'
-                    @click='this.try_others=!this.try_others'> 
-                    Looks lame, try another strategy
-                    <span v-if='this.try_others'>
-                        <<<
-                    </span>
-                    <span v-else>
-                        >>>
-                    </span>
-                </button>
-            </div>
-            
-            <div class='row'>
-                <div class='collapse mt-3 col' id='evaluate'>
-                    <div class='card card-body'>
-                        <div class='row mb-3'>
-                            <div class=col>
-                                Evaluation:
+            <div class='accordion' id='feedbackAccordion'>
+                <div class='accordion-item'>
+                    <h2 class='accordion-header' id='headingEval'>
+                        <button 
+                            @click='this.satisfy =! this.satisfy'
+                            class='accordion-button collapsed'
+                            type='button' 
+                            data-bs-toggle='collapse'
+                            data-bs-target='#evaluation'
+                            aria-expanded="true"
+                            aria-controls="evaluation">
+                            Looks nice, evaluate them
+                        </button>
+                    </h2>
+
+                    <div 
+                        id='evaluation'
+                        class='accordion-collapse collapse'
+                        area-labelledby='headingEval'
+                        data-bs-parent='#feedbackAccordion'>
+                        <div class='accordion-body'>                        
+                            <div class='row mb-1'>
+                                <div class='col'>
+                                    <label for="plausibility" class="form-label col">Plausibility: ({{plausibility}}/5)</label>
+                                </div>
+                                <div class='col'>
+                                    <input v-model='plausibility' type="range" class="form-range" min="1" max="5" step="1" id="plausibility"> 
+                                </div>
+                                <div class='col'>
+                                    <label for="clearance" class="form-label">Clearance: ({{clearance}}/5)</label>
+                                </div>
+                                <div class='col'>
+                                    <input v-model='clearance' type="range" class="form-range" min="1" max="5" step="1" id="clearance"> 
+                                </div>
                             </div>
-                        </div>
-                        <div class='row mb-1'>
-                            <div class='col'>
-                                <label for="plausibility" class="form-label col">Plausibility: ({{plausibility}}/5)</label>
-                            </div>
-                            <div class='col'>
-                                <input v-model='plausibility' type="range" class="form-range" min="1" max="5" step="1" id="plausibility"> 
-                            </div>
-                            <div class='col'>
-                                <label for="clearance" class="form-label">Clearance: ({{clearance}}/5)</label>
-                            </div>
-                            <div class='col'>
-                                <input v-model='clearance' type="range" class="form-range" min="1" max="5" step="1" id="clearance"> 
-                            </div>
-                        </div>
-                        <div class='row mt-4 float-end'>
-                            <div class='col'>
-                                <button 
-                                class='btn btn-primary'
-                                id="submit-eval"
-                                type="button"
-                                name="submit-eval"
-                                @click='submit_eval()'>Submit evaluation</button>
+                            <div class='row mt-4'>
+                                <div class='col'>
+                                    <button 
+                                    class='btn btn-primary'
+                                    id="submit-eval"
+                                    type="button"
+                                    name="submit-eval"
+                                    @click='submit_eval()'>Submit evaluation</button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class='collapse mt-3 col' id='try-others'>
-                    <div class='card card-body'>
-                        <div class='row mb-1'>
-                            <div class='col'>
-                                <label for="masks">Masking strategy:</label>
+                <div class='accordion-item'>
+                    <h2 class='accordion-header' id='headingTryOthers'>
+                        <button 
+                            class='accordion-button collapsed'
+                            type='button'
+                            data-bs-toggle='collapse'
+                            data-bs-target='#try-others'
+                            aria-expanded='false'
+                            aria-controls="try-others">
+                            Looks lame, try another strategy
+                        </button>
+                    </h2>
+                    <div 
+                        id='try-others'
+                        class='accordion-collapse collapse'
+                        area-labelledby='headingTryOthers'
+                        data-bs-parent='#feedbackAccordion'>
+                        <div class='accordion-body'>
+                            <div class='row mb-1'>
+                                <div class='col'>
+                                    <label for="masks">Masking strategy:</label>
+                                </div>
+                                <div class='col'>
+                                    <select class='form-select' v-model='masking_strategy' name="masks" id="masks">
+                                        <option value="expred">ExPred</option>
+                                        <option value="custom">Custom</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div class='col'>
-                                <select class='form-select' v-model='masking_strategy' name="masks" id="masks">
-                                    <option value="expred">ExPred</option>
-                                    <option value="custom">Custom</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class='row card card-body mb-3 ms-1 me-1' v-show='masking_strategy === "custom"'>
-                            <div class='col-sm-auto'>
-                                <div class='row'>Custom Masking:</div>
-                            </div>
-                            <div clas='col'>
-                                <span class="rec-counter" id="selected-sentence">
-                                    <span v-for='(word, j) in examples[0]["input"]'>
-                                        <span 
-                                        @click='toggle_custom_mask(j)'
-                                        v-bind:class='[{ "fw-bold": custom_mask[j] === 1 }, { "mark": examples[0]["replaced"] === j }]'>
-                                        {{ word }}
-                                        </span>{{' '}}
+                            <div class='row card card-body mb-3 ms-1 me-1' v-show='masking_strategy === "custom"'>
+                                <div class='col-sm-auto'>
+                                    <div class='row'>Custom Masking:</div>
+                                </div>
+                                <div clas='col'>
+                                    <span class="rec-counter" id="selected-sentence">
+                                        <span v-for='(word, j) in examples[0]["input"]'>
+                                            <span 
+                                            @click='toggle_custom_mask(j)'
+                                            v-bind:class='[{ "fw-bold": custom_mask[j] === 1 }, ]'>
+                                            {{ word }}
+                                            </span>{{' '}}
+                                        </span>
                                     </span>
-                                </span>
+                                </div>
                             </div>
-                        </div>
-                        <div class='row mb-1'>
-                            <div class='col'>
-                                <label for="attrs">Attribution Strategy:</label>
+                            <div class='row mb-1'>
+                                <div class='col'>
+                                    <label for="attrs">Attribution Strategy:</label>
+                                </div>
+                                <div class='col'>
+                                    <select class='form-select' name="attrs" id="attrs">
+                                        <optgroup label="Gradient-based">
+                                            <option value="gradient">Gradient Attribution (HotFlip)</option>
+                                        </optgroup>
+                                        <optgroup label="Hierarchical">
+                                            <option value="hierarchical">Hierarchical importance</option>
+                                        </optgroup>
+                                        <optgroup label="Attention-based">
+                                            <option value="att">Attention score</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
                             </div>
-                            <div class='col'>
-                                <select class='form-select' name="attrs" id="attrs">
-                                    <optgroup label="Gradient-based">
-                                        <option value="gradient">Gradient Attribution (HotFlip)</option>
-                                    </optgroup>
-                                    <optgroup label="Hierarchical">
-                                        <option value="hierarchical">Hierarchical importance</option>
-                                    </optgroup>
-                                    <optgroup label="Attention-based">
-                                        <option value="att">Attention score</option>
-                                    </optgroup>
-                                </select>
+                            <div class='row mb-1'>
+                                <div class='col'>
+                                    <label for="new_words">Replacement Retrieving Strategy:</label>
+                                </div>
+                                <div class='col'>
+                                    <select class='form-select' name="new_words" id="new_words">
+                                        <optgroup label="Gradient-based">
+                                            <option value="gradient">Gradient Attribution (HotFlip)</option>
+                                        </optgroup>
+                                        <optgroup label="Masked-model-based">
+                                            <option value="ptuning">P-Tuning</option>
+                                            <option value="t5">T5 model</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
                             </div>
-                        </div>
-                        <div class='row mb-1'>
-                            <div class='col'>
-                                <label for="new_words">Replacement Retrieving Strategy:</label>
+                            <div class='row mb-1 mt-4'>
+                                <div class='col'>
+                                    <input class='form-check-input me-1' type="checkbox" id="gramma_res" name="gramma_res">
+                                    <label for="gramma_res"> Grammatical restriction </label>
+                                </div>
+                                <div class='col'>
+                                    <input class='form-check-input me-1' type="checkbox" id="ins" name="ins">
+                                    <label for="ins">Insertion</label>
+                                </div>
+                                <div class='col'>
+                                    <input class='form-check-input me-1' type="checkbox" id="del" name="del">
+                                    <label for="del">Deletion</label>
+                                </div>
                             </div>
-                            <div class='col'>
-                                <select class='form-select' name="new_words" id="new_words">
-                                    <optgroup label="Gradient-based">
-                                        <option value="gradient">Gradient Attribution (HotFlip)</option>
-                                    </optgroup>
-                                    <optgroup label="Masked-model-based">
-                                        <option value="ptuning">P-Tuning</option>
-                                        <option value="t5">T5 model</option>
-                                    </optgroup>
-                                </select>
-                            </div>
-                        </div>
-                        <div class='row mb-1 mt-4'>
-                            <div class='col'>
-                                <input class='form-check-input me-1' type="checkbox" id="gramma_res" name="gramma_res">
-                                <label for="gramma_res"> Grammatical restriction </label>
-                            </div>
-                            <div class='col'>
-                                <input class='form-check-input me-1' type="checkbox" id="ins" name="ins">
-                                <label for="ins">Insertion</label>
-                            </div>
-                            <div class='col'>
-                                <input class='form-check-input me-1' type="checkbox" id="del" name="del">
-                                <label for="del">Deletion</label>
-                            </div>
-                        </div>
-                        <div class='row mt-4 float-end'>
-                            <div class='col'>
-                                <button 
-                                class='btn btn-primary'
-                                id="apply-mask"
-                                type="button"
-                                name="predict-mask"
-                                @click='apply_mask()'>Try this</button>
+                            <div class='row mt-4'>
+                                <div class='col'>
+                                    <button 
+                                    class='btn btn-primary'
+                                    id="apply-mask"
+                                    type="button"
+                                    name="predict-mask"
+                                    @click='apply_mask()'>Try this</button>
+                                </div>
                             </div>
                         </div>
                     </div>

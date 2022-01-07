@@ -3,7 +3,7 @@ from typing import Tuple
 import torch
 from torch import Tensor, nn
 
-from config import CountefactualConfig
+from config import CounterfactualConfig
 from expred.expred.models.mlp_mtl import CLSModel, MTLModel
 from inputs import ExpredInput
 
@@ -55,7 +55,7 @@ def fit_mask_to_decoded_docs(mask, tokens, tokenizer):
 
     
 class Expred(nn.Module):
-    def __init__(self, cf_config:CountefactualConfig) -> None:
+    def __init__(self, cf_config:CounterfactualConfig) -> None:
         super(Expred, self).__init__()
         self.mtl_module = MTLModel.from_pretrained(cf_config.mtl_config)
         self.cls_module = CLSModel.from_pretrained(cf_config.cls_config)

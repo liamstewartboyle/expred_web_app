@@ -1,9 +1,8 @@
 from typing import Dict, List, Tuple, Union
 
 import torch
-from transformers import BasicTokenizer, BertTokenizer
 from tokenizer import BertTokenizerWithSpans
-from config import CountefactualConfig
+from config import CounterfactualConfig
 from expred_utils import Expred
 from torch import Tensor, nn
 
@@ -24,7 +23,7 @@ position_scoring_methods = {'gradient': scoring_position_grad}
 word_scoring_methods = {'gradient': scoring_words_grad}
     
 class ExpredCounterAssist():
-    def __init__(self, cf_config: CountefactualConfig, model: Expred):
+    def __init__(self, cf_config: CounterfactualConfig, model: Expred):
         # self.cf_config = cf_config
         self.number_top_positions = cf_config.number_top_positions
         self.max_count_word_replacement = cf_config.max_count_word_replacement
@@ -170,7 +169,7 @@ class ExpredCounterAssist():
                                       (1, self.number_top_positions)).reshape((-1)).to(self.device)
         return orig_cls_preds, tiled_orig_preds, current_cls_preds, current_bert_embeddings
     
-    def geneate_counterfactuals(self, cf_input: CounterfactualInput,
+    def geneate_counterfactuals(self, cf_input:CounterfactualInput,
                                 span_tokenizer:BertTokenizerWithSpans):
         
         subtoken_input_rationale_masks, position_masks = self.compute_masks(cf_input)
@@ -183,6 +182,7 @@ class ExpredCounterAssist():
         
         cf_res = {
             'mask': token_docs_rationale_mask[0],
+            'subtoken_mask': subtoken_docs_rationale_mask[0].tolist(),
             'instances': [self._postprocess(current_cls_preds, cf_input, span_tokenizer, -1)]
         }
         
@@ -210,6 +210,8 @@ class ExpredCounterAssist():
             if count_words_replaced == self.max_count_word_replacement or self._pred_is_flipped(cf_res):
                 break
             
+        cf_input.counterfactual_results = cf_res
+        
         return cf_res
     
 

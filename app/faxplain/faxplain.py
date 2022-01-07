@@ -1,10 +1,10 @@
 import pickle
-from typing import Counter, List
 
+from counterfact_writer import CounterfactWriter
 from flask import Flask, redirect, render_template, request, url_for
 from transformers.models.bert.tokenization_bert import BasicTokenizer
-from config import CountefactualConfig
 
+from config import CounterfactualConfig
 from counter_assist import ExpredCounterAssist
 from dataset import Dataset
 from debug import get_bogus_pred
@@ -27,9 +27,7 @@ class CustomFlask(Flask):
     ))
 
 
-# This replaces your existing "app = Flask(__name__)"
 app = CustomFlask(__name__)
-# app = Flask(__name__)
 app.jinja_env.filters['zip'] = zip
 
 
@@ -149,67 +147,11 @@ def get_mtl_mask(encoded_queries, encoded_docs):
     return masks, masked_docs
 
 
-def get_counterfactual(orig_query: str,
-                       orig_doc: str,
-                       cls_label,
-                       top_poses=10,
-                       custom_masks: List[List[int]] = None,
-                       pos_restriction: bool = False):
-    (
-        encoded_queries,
-        query_slice,
-        encoded_docs,
-        docs_slice,
-        docs_split,
-    ) = preprocess(orig_query, [orig_doc], span_tokenizer, basic_tokenizer, 1, max_sentence)
-    doc_masks, masked_docs = get_mtl_mask(encoded_queries, encoded_docs)
-    top_poses = min(top_poses, len(masked_docs[0]))
-    # TODO: fix these magic numbers
-    encoded_query = encoded_queries[0]
-    encoded_doc = encoded_docs[0]
-    masked_doc = masked_docs[0]
-    doc_mask = doc_masks[0]
-
-    cls_inputs = torch.cat(
-        (torch.Tensor([span_tokenizer.cls_token_id]),
-         encoded_query,
-         torch.Tensor([span_tokenizer.sep_token_id]),
-         masked_doc)).type(torch.long).unsqueeze(0)
-    cls_attention_masks = torch.ones_like(
-        cls_inputs).type(torch.float).unsqueeze(0)
-
-    cf_input = CounterfactualInput()
-    counterfacual_res = cf_gen(cls_module, cls_inputs, custom_masks, cls_attention_masks,
-                               cls_label.unsqueeze(0),
-                               label_classes=class_names,
-                               top_poses=top_poses,
-                               max_n_words_to_replace=n_word_replace,
-                               device='cpu')
-    # counterfacual_doc = counterfacual_res[0]['input'][(len(encoded_query) + 2):]
-    # counterfacual_doc = encoded_doc * (1 - doc_mask) + counterfacual_doc * doc_mask
-    # decoded_doc = tokenizer.decode(counterfacual_doc)
-    counterfacual_res[0]['doc'] = basic_tokenizer.tokenize(orig_doc)
-    counterfacual_res[0]['mask'] = fit_mask_to_decoded_docs(
-        doc_masks[0], counterfacual_res[0]['doc'], span_tokenizer)
-    for i in range(1, len(counterfacual_res)):
-        counterfacual_doc = counterfacual_res[i]['input'][(
-            len(encoded_query) + 2):]
-        counterfacual_doc = encoded_doc * \
-            (1 - doc_mask) + counterfacual_doc * doc_mask
-        counterfacual_res[i]['doc'] = span_tokenizer.decode(counterfacual_doc)
-
-    return counterfacual_res
-
-# @app.route('/counterfactual', methods=['GET', 'POST'])
-# def conterfactual():
-#     return render_template('counterfactual.html')
-
-
 @app.route('/counterfactual', methods=['GET', 'POST'])
 def counterfactual():
-    query, doc, label = dataset.random_select_data(basic_tokenizer)
+    ann_id, query, doc, label = dataset.random_select_data(basic_tokenizer)
     
-    cf_input = CounterfactualInput(query, doc, label, cf_config)
+    cf_input.init_from_dataset(query, doc, label, cf_config, ann_id)
     cf_input.preprocess(span_tokenizer)
     
     _, cls_preds, exp_preds = expred(cf_input)
@@ -232,92 +174,32 @@ def counterfactual():
 @app.route('/show_example', methods=['GET', 'POST'])
 def show_example():
     cf_config.update_config_from_ajax_request(request)
-    cf_input = CounterfactualInput.from_ajax_request(request, basic_tokenizer, cf_config)
+    cf_input.update_from_ajax_request(request, basic_tokenizer, cf_config)
     cf_input.preprocess(span_tokenizer)
     cf_input.update_custom_masks_from_ajax_request(request)
 
     cf_examples = counter_assist.geneate_counterfactuals(cf_input, span_tokenizer)
-    return {"cf_examples": cf_examples}
+    cf_results = {"cf_examples": cf_examples,
+                  'ann_id': cf_input.ann_id}
+    cf_input.counterfactual_results = cf_results
+    
+    writer.write_cf_example(cf_input, cf_config)
+    
+    return cf_results
 
 @app.route('/reg_eval', methods=['POST'])
 def register_evaluation():
+    writer.write_evaluation(cf_input, cf_config, request.json)
     return {'placeholder': None}
 
-# @app.route('/doc_history', methods=['POST'])
-# def doc_history():
-#     # phase 0: parse
-#     orig_query = request.json['query'].strip()
-#     raw_orig_doc_html = request.json['masked_raw_html'].strip()
-#     orig_label = request.json['label']
-
-#     mask_method = request.json['mask_method']
-#     attr_method = request.json['attr_method']
-#     gen_method = request.json['gen_method']
-
-#     gramma_res = request.json['gramma_res']
-#     allow_ins = request.json['ins']
-#     allow_del = request.json['del']
-
-#     cls_label = torch.LongTensor(class_names.index(orig_label))
-#     ret = parse_sentence(raw_orig_doc_html, ret_custom_mask=True)
-#     orig_doc = ret['doc']
-#     masks = [ret['mask']]
-
-#     # phase 0.5: preprocess
-#     (
-#         encoded_query,
-#         query_slice,
-#         encoded_docs,
-#         docs_slice,
-#         _
-#     ) = preprocess(orig_query, [orig_doc], tokenizer, basic_tokenizer, 1, max_sentence)
-
-#     # phase 1: masking
-#     if mask_method == 'expred':
-#         _, mask, masked_docs = mtl_predict(mtl_module, encoded_query, encoded_docs, tokenizer)
-#         masks = [mask]
-#     else:
-#         max_length = min(max(map(len, encoded_docs)) + 2 + len(encoded_query), 512)
-#         masked_docs = apply_masks_to_docs(encoded_query, encoded_docs, masks, tokenizer, max_length)
-#     masks = [torch.cat([
-#         torch.zeros(len(encoded_query) + 2).type(torch.long),
-#         pad_mask_to_doclen(mask, doc)
-#     ]) for doc, mask in zip(encoded_docs, masks)]
-#     masks = torch.stack(masks, dim=0)
-#     cls_inputs = [torch.cat(
-#         (torch.Tensor([tokenizer.cls_token_id]),
-#          encoded_query,
-#          torch.Tensor([tokenizer.sep_token_id]),
-#          d)).type(torch.long).unsqueeze(0) for d in masked_docs]
-#     cls_attention_masks = torch.ones_like(cls_inputs).type(torch.float).unsqueeze(0)
-
-#     hotflip_res = get_counterfactual(orig_query, orig_doc, cls_label, top_pos, masks)
-#     return render_template('doc_history.html', hotflip_res=hotflip_res)
-
-
-# @app.route('/doc-history', methods=['GET'])
-# def query_history():
-#     orig_query = request.args.get('query')
-#     orig_doc = request.args.get('doc')
-#     (
-#         encoded_queries,
-#         query_slice,
-#         encoded_docs,
-#         docs_slice,
-#         _
-#     ) = preprocess(orig_query, [orig_doc], tokenizer, basic_tokenizer, 1, max_sentence)
-#     # [0] for there is only one query and only 1 doc for the counterfactual generation
-#     queries = [torch.tensor(encoded_queries[0], dtype=torch.long)]
-#     docs = [torch.tensor(encoded_docs[0], dtype=torch.long)]
-#     cls_preds = cls_predict(cls_module, queries, docs, tokenizer)
-#     return render_template('doc_history.html', doc_history=[orig_doc], preds=cls_preds)
-# if cf_config.debug:
 if False:
     print('debug, will not load models')
 else:
     print("Loading models")
 
-    cf_config = CountefactualConfig()
+    cf_config = CounterfactualConfig()
+    
+    cf_input = CounterfactualInput()
     
     span_tokenizer = BertTokenizerWithSpans.from_pretrained(cf_config.bert_dir)
     basic_tokenizer = BasicTokenizer()
@@ -326,8 +208,9 @@ else:
 
     dataset = Dataset(cf_config.dataset_name, cf_config.dataset_base_dir)
 
-
     counter_assist = ExpredCounterAssist(cf_config, expred)
+    
+    writer = CounterfactWriter()
 
 
 if __name__ == '__main__':
