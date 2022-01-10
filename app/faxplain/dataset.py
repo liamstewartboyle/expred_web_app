@@ -1,11 +1,11 @@
 import os
 from itertools import chain
+from typing import List, Tuple
 
 from transformers import BasicTokenizer
 import random
 from counter_assist import CounterfactualInput
-from expred.expred.eraser_utils import (load_documents,
-                                                     load_eraser_data)
+from expred.expred.eraser_utils import (load_documents, load_eraser_data)
 
 
 def maybe_download_dataset(dataset_name, dataset_base_dir):
@@ -18,7 +18,6 @@ def maybe_download_dataset(dataset_name, dataset_base_dir):
         urllib.request.urlretrieve(dataset_url, dataset_tarfilename)
         shutil.unpack_archive(dataset_tarfilename, dataset_base_dir, 'gztar')
         
-
         
 class Dataset():
     def __init__(self, dataset_name, dataset_base_dir) -> None:
@@ -37,6 +36,6 @@ class Dataset():
         doc = self.docs[docid]
         label = self.raw_data[ann_id].label
         
-        return query, doc, label
+        return ann_id, query, doc, label
     
    

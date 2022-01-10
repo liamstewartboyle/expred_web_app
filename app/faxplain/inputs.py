@@ -1,26 +1,25 @@
 from itertools import chain
-from os import supports_bytes_environ
-import re
-from typing import Any, List, Tuple, Type, Union
+from typing import Any, List, Tuple, Union
 
 import torch
-from torch import Tensor, LongTensor
+from torch import Tensor
 from transformers import BertTokenizer
 from transformers import BasicTokenizer
 
-from config import CountefactualConfig, ExpredConfig
+from config import CounterfactualConfig, ExpredConfig
 from tokenizer import BertTokenizerWithSpans
 
 
 class ExpredInput():
     masked_inputs: Tensor
-    def __init__(self, queries, docs, labels, config:ExpredConfig):
+    def init_from_dataset(self, queries, docs, labels, config:ExpredConfig, ann_id:str=None):
         self.orig_queries = queries
         self.orig_sentences:List[List[List[str]]] = docs
         self.orig_docs = [list(chain.from_iterable(doc)) for doc in docs]
         self.orig_labels = labels
         self.config = config
         self.class_names = config.class_names
+        self.ann_id = ann_id
         
     def class_name_to_id(self, name):
         return self.class_names.index(name)
@@ -152,21 +151,21 @@ class ExpredInput():
     def concat_overead_subtoken_mask(self, subtoken_doc_mask):
         return [1] * (len(self.encoded_queries[0]) + 2) + subtoken_doc_mask + [1]
 
-    
+
+#TODO: separate the cf_results etc. from the "input" context
 class CounterfactualInput(ExpredInput):
     input_mask: List[int]
     custom_doc_masks = None
     custom_input_masks = None
-    def __init__(self,
-                 query:str,
-                 doc:List[List[str]],
-                 label: str,
-                 cf_config: CountefactualConfig,
-                 custom_doc_mask: List[int]=None) -> None:
-        super().__init__([query], [doc], [label], cf_config)
-        if custom_doc_mask:
-            self.custom_doc_masks = [custom_doc_mask]
-            self.custom_input_masks = self.concat_overead_subtoken_mask(custom_doc_mask)
+    counterfactual_results = None
+    def init_from_dataset(self,
+             query:str,
+             doc:List[List[str]],
+             label: str,
+             cf_config: CounterfactualConfig,
+             ann_id:str=None) -> None:
+        super().init_from_dataset([query], [doc], [label], cf_config, ann_id)
+        
     
     def update_custom_masks(self, subtoken_doc_mask, subtoken_input_mask):
         self.custom_doc_masks = torch.Tensor([subtoken_doc_mask])
@@ -185,9 +184,7 @@ class CounterfactualInput(ExpredInput):
         
     @classmethod
     def _extract_custom_doc_mask(cls, request)->Union[List[int], Any]:
-        if request.json['use_custom_mask']:
-            return request.json['custom_mask']
-        return None
+        return request.json['custom_mask']
     
     def expand_to_subtoken_mask(self, token_mask, subtoken_spans):
         assert len(token_mask) == len(subtoken_spans)
@@ -203,11 +200,9 @@ class CounterfactualInput(ExpredInput):
             custom_subtoken_input_mask = self.concat_overead_subtoken_mask(custom_subtoken_doc_mask)
             self.update_custom_masks(custom_subtoken_doc_mask, custom_subtoken_input_mask)
     
-    @classmethod
-    def from_ajax_request(cls, request, basic_tokenizer, cf_config):
+    def update_from_ajax_request(self, request, basic_tokenizer, cf_config):
         orig_query = basic_tokenizer.tokenize(request.json['query'])
         orig_doc = [request.json['doc']]
         orig_label = request.json['label']
 
-        cf_input = CounterfactualInput(orig_query, orig_doc, orig_label, cf_config)
-        return cf_input
+        self.init_from_dataset(orig_query, orig_doc, orig_label, cf_config, self.ann_id)

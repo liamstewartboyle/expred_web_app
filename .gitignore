@@ -1,4 +1,5 @@
 # Byte-compiled / optimized / DLL files
+app/faxplain/counterfactual_res/*
 app/faxplain/data
 .idea
 *.zip

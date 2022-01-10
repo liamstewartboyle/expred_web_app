@@ -18,9 +18,11 @@ const app = Vue.createApp({
             this.is_cf_example_ready = false
             use_custom_mask = false
             custom_mask = undefined
+            masking_method = 'expred'
             if (evt.hasOwnProperty('mask') && !(typeof evt['mask'] === "undefined") ) {
                 use_custom_mask = true
                 custom_mask = evt['mask']
+                masking_method = 'custom'
             }
             let data = {
                 query: evt['query'],
@@ -28,6 +30,7 @@ const app = Vue.createApp({
                 label: evt['label'],
                 use_custom_mask: use_custom_mask,
                 custom_mask: custom_mask,
+                masking_method: masking_method,
                 position_scoring_method: 'gradient',
                 word_scoring_method: 'gradient',
                 gramma: false

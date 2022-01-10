@@ -14,7 +14,7 @@ class FaxplainConfig(ExpredConfig):
         self.load_from_pretrained = True
 
 
-class CountefactualConfig(ExpredConfig):
+class CounterfactualConfig(ExpredConfig):
     top_docs = 1
     max_sentence = 30
     max_count_word_replacement = 5
@@ -24,6 +24,8 @@ class CountefactualConfig(ExpredConfig):
         
     position_scoring_method = 'gradient'
     word_scoring_method = 'gradient'
+    use_custom_mask = False
+    masking_method = 'expred'
     constraints = {
         'gramma': False,
     }
@@ -38,6 +40,8 @@ class CountefactualConfig(ExpredConfig):
     def update_config_from_ajax_request(self, request) -> None:
         self.position_scoring_method = request.json['position_scoring_method']
         self.word_scoring_method = request.json['word_scoring_method']
+        self.use_custom_mask = request.json['use_custom_mask']
+        self.masking_method = request.json['masking_method']
         self.constraints = {
             'gramma': request.json['gramma'],
         }
