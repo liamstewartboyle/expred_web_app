@@ -6,7 +6,7 @@ from typing import Any, List, Tuple, Type, Union
 import torch
 from torch import Tensor, LongTensor
 from transformers import BertTokenizer
-from transformers.models.bert.tokenization_bert import BasicTokenizer
+from transformers import BasicTokenizer
 
 from config import CountefactualConfig, ExpredConfig
 from tokenizer import BertTokenizerWithSpans
