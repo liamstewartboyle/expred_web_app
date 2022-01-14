@@ -4,6 +4,7 @@ from typing import Any, List, Tuple, Union
 import torch
 from torch import Tensor
 from transformers import BertTokenizer
+from transformers import BasicTokenizer
 
 from config import CounterfactualConfig, ExpredConfig
 from tokenizer import BertTokenizerWithSpans

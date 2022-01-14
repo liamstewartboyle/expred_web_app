@@ -2,7 +2,8 @@ import pickle
 
 from counterfact_writer import CounterfactWriter
 from flask import Flask, redirect, render_template, request, url_for
-from transformers.models.bert.tokenization_bert import BasicTokenizer
+from transformers import BasicTokenizer
+from config import CountefactualConfig
 
 from config import CounterfactualConfig
 from counter_assist import ExpredCounterAssist

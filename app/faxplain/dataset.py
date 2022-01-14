@@ -27,9 +27,8 @@ class Dataset():
         self.raw_data = {x.ann_id: x for x in chain.from_iterable(_raw_data)}
         self.docs = load_documents(dataset_dir)
 
-    def random_select_data(self, basic_tokenizer: BasicTokenizer) -> Tuple[str, List[str], List[List[str]], str]:
-        # ann_id = random.choice(list(self.raw_data.keys()))
-        ann_id = 'posR_018.txt'
+    def random_select_data(self, basic_tokenizer:BasicTokenizer) -> CounterfactualInput:
+        ann_id = random.choice(list(self.raw_data.keys()))
         selected_ann = self.raw_data[ann_id]
         docid = selected_ann.docid
 

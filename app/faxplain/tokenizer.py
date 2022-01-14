@@ -4,7 +4,7 @@ from typing import List, Dict, Tuple, Union
 import os
 from torch.functional import Tensor
 from transformers import BertTokenizer
-from transformers.models.bert.tokenization_bert import BasicTokenizer
+from transformers import BasicTokenizer
 
 # from expred.models.pipeline.bert_pipeline import bert_intern_doc
 from eraser_utils import Evidence, Annotation
