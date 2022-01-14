@@ -17,8 +17,8 @@ def maybe_download_dataset(dataset_name, dataset_base_dir):
         os.makedirs(dataset_base_dir, exist_ok=True)
         urllib.request.urlretrieve(dataset_url, dataset_tarfilename)
         shutil.unpack_archive(dataset_tarfilename, dataset_base_dir, 'gztar')
-        
-        
+
+
 class Dataset():
     def __init__(self, dataset_name, dataset_base_dir) -> None:
         maybe_download_dataset(dataset_name, dataset_base_dir)
@@ -26,17 +26,15 @@ class Dataset():
         _raw_data = load_eraser_data(dataset_dir, merge_evidences=True)
         self.raw_data = {x.ann_id: x for x in chain.from_iterable(_raw_data)}
         self.docs = load_documents(dataset_dir)
-        
-    def random_select_data(self, basic_tokenizer:BasicTokenizer) -> Tuple[str, List[str], List[List[str]], str]:
+
+    def random_select_data(self, basic_tokenizer: BasicTokenizer) -> Tuple[str, List[str], List[List[str]], str]:
         # ann_id = random.choice(list(self.raw_data.keys()))
-        ann_id = 'negR_260.txt'
+        ann_id = 'posR_018.txt'
         selected_ann = self.raw_data[ann_id]
         docid = selected_ann.docid
-       
+
         query = basic_tokenizer.tokenize(selected_ann.query)
         doc = self.docs[docid]
         label = self.raw_data[ann_id].label
-        
+
         return ann_id, query, doc, label
-    
-   

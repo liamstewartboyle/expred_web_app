@@ -173,6 +173,7 @@ def counterfactual():
 
 @app.route('/show_example', methods=['GET', 'POST'])
 def show_example():
+    #TODO: flush custom mask for each sentence/each documents
     cf_config.update_config_from_ajax_request(request)
     cf_input.update_from_ajax_request(request, basic_tokenizer, cf_config)
     cf_input.preprocess(span_tokenizer)

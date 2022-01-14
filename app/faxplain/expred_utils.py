@@ -32,16 +32,16 @@ from inputs import ExpredInput
 #     with torch.no_grad():
 #         cls_module.eval()
 #         cls_inputs, attention_masks = expred_inputs_preprocess(queries, masked_docs, tokenizer)
-#         cls_preds, _ = cls_module(inputs=cls_inputs, attention_masks=attention_masks)
+#         cls_pred, _ = cls_module(inputs=cls_inputs, attention_masks=attention_masks)
 
-#     cls_preds = [class_names[torch.argmax(p)] for p in cls_preds]
-#     return cls_preds
+#     cls_pred = [class_names[torch.argmax(p)] for p in cls_pred]
+#     return cls_pred
 
 
 # def expred_predict(mtl_module, cls_module, queries, docs, docs_slice, tokenizer):
 #     aux_preds, hard_exp_preds, masked_docs = mtl_predict(mtl_module, queries, docs, tokenizer)
-#     cls_preds = cls_predict(cls_module, queries, masked_docs, tokenizer)
-#     return aux_preds, cls_preds, hard_exp_preds#, docs_clean
+#     cls_pred = cls_predict(cls_module, queries, masked_docs, tokenizer)
+#     return aux_preds, cls_pred, hard_exp_preds#, docs_clean
 
 
 def fit_mask_to_decoded_docs(mask, tokens, tokenizer):
@@ -67,6 +67,6 @@ class Expred(nn.Module):
         rationale_masks = inputs.select_all_overheads(hard_exp_preds)
         inputs.apply_masks_to_inputs(rationale_masks)
         cls_preds = self.cls_module(inputs.masked_inputs, inputs.attention_masks)
-        cls_preds = cls_preds['cls_preds']
+        cls_preds = cls_preds['cls_pred']
         return aux_preds, cls_preds, hard_exp_preds
     
