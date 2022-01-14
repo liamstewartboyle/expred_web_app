@@ -1,10 +1,8 @@
-import os
 from expred.expred.config import ExpredConfig
 
-
 application = 'counterfactual'
-       
-        
+
+
 class FaxplainConfig(ExpredConfig):
     def __init__(self) -> None:
         super().__init__(dataset_name='fever',
@@ -19,9 +17,9 @@ class CounterfactualConfig(ExpredConfig):
     max_sentence = 30
     max_count_word_replacement = 5
     number_top_positions = 10
-    
+
     bert_dir = 'bert-base-uncased'
-        
+
     position_scoring_method = 'gradient'
     word_scoring_method = 'gradient'
     use_custom_mask = False
@@ -29,11 +27,11 @@ class CounterfactualConfig(ExpredConfig):
     constraints = {
         'gramma': False,
     }
-    
+
     def __init__(self) -> None:
         super().__init__(dataset_name='movies',
-                         mtl_url = 'https://www.dropbox.com/s/qen0vx2uz6ksn3m/evidence_token_identifier.pt?dl=1',
-                         cls_url = 'https://www.dropbox.com/s/0sfrdykcg6cf6kh/evidence_classifier.pt?dl=1',
+                         mtl_url='https://www.dropbox.com/s/qen0vx2uz6ksn3m/evidence_token_identifier.pt?dl=1',
+                         cls_url='https://www.dropbox.com/s/0sfrdykcg6cf6kh/evidence_classifier.pt?dl=1',
                          class_names=['NEG', 'POS'])
         self.load_from_pretrained = True
 

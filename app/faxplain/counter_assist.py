@@ -1,12 +1,12 @@
 from typing import Dict, List, Tuple, Union
 
 import torch
-from tokenizer import BertTokenizerWithSpans
-from config import CounterfactualConfig
-from expred_utils import Expred
 from torch import Tensor, nn
 
+from config import CounterfactualConfig
+from expred_utils import Expred
 from inputs import CounterfactualInput
+from tokenizer import BertTokenizerWithSpans
 
 
 def scoring_position_grad(grad_wrt_embd: Tensor, bert_embeddings: Tensor, rationale_masks: Tensor) -> Tensor:
@@ -50,10 +50,6 @@ class ExpredCounterAssist():
         self.model.cls_module.return_cls_embedding = False
         if self.position_scoring_method == 'gradient' or self.word_scoring_method == 'gradient':
             self.model.cls_module.return_bert_embedding = True
-
-    def init_counterfactual_input(self, cf_input: CounterfactualInput):
-        pass
-        return cf_input
 
     def _get_word_embedding(self) -> Tensor:
         return self.model.cls_module.bare_bert.embeddings.word_embeddings.weight.unsqueeze(dim=0)

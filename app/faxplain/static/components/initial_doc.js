@@ -16,7 +16,7 @@ const initial_doc = app.component('initial-doc', {
             type: String,
             required: true
         },
-        pred:{
+        pred: {
             type: String,
             required: true
         },
@@ -27,6 +27,10 @@ const initial_doc = app.component('initial-doc', {
         neg_img_url: {
             type: String,
             required: true
+        },
+        is_cf_example_loading: {
+            type: Boolean,
+            required: true
         }
     },
     data() {
@@ -35,12 +39,13 @@ const initial_doc = app.component('initial-doc', {
             img_dir: {
                 'POS': this.pos_img_url,
                 "NEG": this.neg_img_url
-            }
+            },
+            is_cf_example_loading: this.is_cf_example_loading
         }
     },
     template:
     /*html*/
-    `
+        `
     <div class='card mb-1'>
         <div class="card-header">
             1. Select a sentence
@@ -116,18 +121,23 @@ const initial_doc = app.component('initial-doc', {
             evt = {
                 query: this.query,
                 sentence: sentence,
-                label:this.label
+                label: this.label
             }
-            this.eventBus.emit('select-sentence', evt)
+            console.log(this.is_cf_example_loading)
+            if (!this.is_cf_example_loading) {
+                this.eventBus.emit('select-sentence', evt)
+            }
         },
         len(exp) {
-           let total = [];
-           exp.forEach(element => {
-               total.push(element)
-           }); 
-           return total.reduce(function(total, num){return total + num}, 0)
+            let total = [];
+            exp.forEach(element => {
+                total.push(element)
+            });
+            return total.reduce(function (total, num) {
+                return total + num
+            }, 0)
         },
-        toggle_show(){
+        toggle_show() {
             this.show_full_doc = !this.show_full_doc
             if (this.show_full_doc) {
                 $('#toggle_show_button').text('Show Rationals Only')

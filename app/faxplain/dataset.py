@@ -1,9 +1,9 @@
-import os
 from itertools import chain
-from typing import List, Tuple
 
-from transformers import BasicTokenizer
+import os
 import random
+from transformers import BasicTokenizer
+
 from counter_assist import CounterfactualInput
 from expred.expred.eraser_utils import (load_documents, load_eraser_data)
 
@@ -27,8 +27,10 @@ class Dataset():
         self.raw_data = {x.ann_id: x for x in chain.from_iterable(_raw_data)}
         self.docs = load_documents(dataset_dir)
 
-    def random_select_data(self, basic_tokenizer:BasicTokenizer) -> CounterfactualInput:
+    def random_select_data(self, basic_tokenizer: BasicTokenizer) -> CounterfactualInput:
         ann_id = random.choice(list(self.raw_data.keys()))
+        # ann_id = random.choice(['posR_018.txt', 'negR_018.txt'])
+        print(ann_id)
         selected_ann = self.raw_data[ann_id]
         docid = selected_ann.docid
 

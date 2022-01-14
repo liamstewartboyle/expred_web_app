@@ -1,12 +1,11 @@
 import pickle
 
-from counterfact_writer import CounterfactWriter
 from flask import Flask, redirect, render_template, request, url_for
 from transformers import BasicTokenizer
-from config import CountefactualConfig
 
 from config import CounterfactualConfig
 from counter_assist import ExpredCounterAssist
+from counterfact_writer import CounterfactWriter
 from dataset import Dataset
 from debug import get_bogus_pred
 from expred.expred.utils import pad_mask_to_doclen
@@ -97,7 +96,7 @@ def prediction(query):
         pred['max_sentences'] = max_sentence
         with open(temp_data_fname, 'wb+') as fout:
             pickle.dump((query, wiki_urls, docs_split,
-                        exp_preds, cls_preds), fout)
+                         exp_preds, cls_preds), fout)
     return render_template('predict.html', pred=pred)
 
 
@@ -151,10 +150,10 @@ def get_mtl_mask(encoded_queries, encoded_docs):
 @app.route('/counterfactual', methods=['GET', 'POST'])
 def counterfactual():
     ann_id, query, doc, label = dataset.random_select_data(basic_tokenizer)
-    
+
     cf_input.init_from_dataset(query, doc, label, cf_config, ann_id)
     cf_input.preprocess(span_tokenizer)
-    
+
     _, cls_preds, exp_preds = expred(cf_input)
     cls_pred_id = cls_preds[0].tolist().index(max(cls_preds[0]))
     cls_pred = cf_input.class_names[cls_pred_id]
@@ -174,7 +173,7 @@ def counterfactual():
 
 @app.route('/show_example', methods=['GET', 'POST'])
 def show_example():
-    #TODO: flush custom mask for each sentence/each documents
+    # TODO: flush custom mask for each sentence/each documents
     cf_config.update_config_from_ajax_request(request)
     cf_input.update_from_ajax_request(request, basic_tokenizer, cf_config)
     cf_input.preprocess(span_tokenizer)
@@ -184,15 +183,17 @@ def show_example():
     cf_results = {"cf_examples": cf_examples,
                   'ann_id': cf_input.ann_id}
     cf_input.counterfactual_results = cf_results
-    
+
     writer.write_cf_example(cf_input, cf_config)
-    
+
     return cf_results
+
 
 @app.route('/reg_eval', methods=['POST'])
 def register_evaluation():
     writer.write_evaluation(cf_input, cf_config, request.json)
     return {'placeholder': None}
+
 
 if False:
     print('debug, will not load models')
@@ -200,9 +201,9 @@ else:
     print("Loading models")
 
     cf_config = CounterfactualConfig()
-    
+
     cf_input = CounterfactualInput()
-    
+
     span_tokenizer = BertTokenizerWithSpans.from_pretrained(cf_config.bert_dir)
     basic_tokenizer = BasicTokenizer()
 
@@ -211,9 +212,8 @@ else:
     dataset = Dataset(cf_config.dataset_name, cf_config.dataset_base_dir)
 
     counter_assist = ExpredCounterAssist(cf_config, expred)
-    
-    writer = CounterfactWriter()
 
+    writer = CounterfactWriter()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)

@@ -4,7 +4,6 @@ from typing import Any, List, Tuple, Union
 import torch
 from torch import Tensor
 from transformers import BertTokenizer
-from transformers import BasicTokenizer
 
 from config import CounterfactualConfig, ExpredConfig
 from tokenizer import BertTokenizerWithSpans
@@ -174,9 +173,6 @@ class CounterfactualInput(ExpredInput):
         self.custom_input_masks = torch.Tensor([subtoken_input_mask])
 
     def tile_attention_masks(self, top_poses):
-        print(self.attention_masks.shape)
-        print(top_poses)
-        print(torch.tile(self.attention_masks, [1, top_poses]).shape)
         self.tiled_attention_masks = torch.tile(self.attention_masks, [1, top_poses]).reshape((top_poses, -1))
 
     def _concat_query_doc_masks(self):
