@@ -6,6 +6,7 @@ const app = Vue.createApp({
             query: '',
             pred: '',
             label: '',
+            session_id: undefined,
             cf_examples: [],
             is_cf_example_loading: false,
             is_cf_example_ready: false,
@@ -25,9 +26,11 @@ const app = Vue.createApp({
                 masking_method = 'custom'
             }
             let data = {
+                ann_id: evt['ann_id'],
                 query: evt['query'],
                 doc: evt['sentence'],
                 label: evt['label'],
+                session_id: this.session_id,
                 use_custom_mask: use_custom_mask,
                 custom_mask: custom_mask,
                 masking_method: masking_method,
@@ -40,6 +43,7 @@ const app = Vue.createApp({
             axios.post(url, data)
                 .then(response => {
                     this.cf_examples = response['data']['cf_examples']
+                    this.session_id = response['data']['session_id']
                     this.is_cf_example_ready = true
                     this.is_cf_example_loading = false
                 })
@@ -49,6 +53,8 @@ const app = Vue.createApp({
         });
         this.eventBus.on('evaluation_done', (data) => {
             let url = "/reg_eval"
+            data.session_id = this.session_id
+            data.cf_examples = this.cf_examples
             axios.post(url, data)
                 .then(response => {
                     this.is_cf_example_loading = false

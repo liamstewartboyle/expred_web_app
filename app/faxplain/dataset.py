@@ -4,7 +4,7 @@ import os
 import random
 from transformers import BasicTokenizer
 
-from counter_assist import CounterfactualInput
+from counterfact_assist import CounterfactualInput
 from expred.expred.eraser_utils import (load_documents, load_eraser_data)
 
 

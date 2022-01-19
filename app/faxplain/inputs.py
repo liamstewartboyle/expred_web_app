@@ -12,15 +12,6 @@ from tokenizer import BertTokenizerWithSpans
 class ExpredInput():
     masked_inputs: Tensor
 
-    def init_from_dataset(self, queries, docs, labels, config: ExpredConfig, ann_id: str = None):
-        self.orig_queries = queries
-        self.orig_sentences: List[List[List[str]]] = docs
-        self.orig_docs = [list(chain.from_iterable(doc)) for doc in docs]
-        self.orig_labels = labels
-        self.config = config
-        self.class_names = config.class_names
-        self.ann_id = ann_id
-
     def class_name_to_id(self, name):
         return self.class_names.index(name)
 
@@ -52,7 +43,7 @@ class ExpredInput():
         self.actual_encoded_docs = actual_encoded_docs
         self.overhead_masks = torch.cat(overhead_masks, dim=0).type(torch.int)
 
-    def concat_queries_docs(self, tokenizer: BertTokenizerWithSpans) -> None:
+    def preprocess_concat_queries_docs(self, tokenizer: BertTokenizerWithSpans) -> None:
         tokenized_res = tokenizer([' '.join(q) for q in self.orig_queries], [' '.join(d) for d in self.orig_docs],
                                   max_length=self.config.max_input_len,
                                   padding=True, truncation=True, return_tensors='pt')
@@ -63,19 +54,18 @@ class ExpredInput():
     def get_encoded_docs(self):
         encoded_docs = []
         for encoded_query, encoded_input, in zip(self.encoded_queries, self.expred_inputs):
-            # TODO: deal with the ending [SEP]
             encoded_docs.append(encoded_input[len(encoded_query) + 2: -1])
         return encoded_docs
 
-    def set_mask_wildcard_id(self, tokenizer: BertTokenizer):
+    def preprocess_set_mask_wildcard_id(self, tokenizer: BertTokenizer):
         self.wildcard_id = tokenizer.convert_tokens_to_ids(self.config.wildcard_token)
 
     def preprocess(self, tokenizer: BertTokenizerWithSpans):
         self.encoded_queries, self.query_spans = self.encode(self.orig_queries, tokenizer)
         self.encoded_docs, self.subtoken_docs_spans = self.encode(self.orig_docs, tokenizer)
         self.preprocess_labels()
-        self.concat_queries_docs(tokenizer)
-        self.set_mask_wildcard_id(tokenizer)
+        self.preprocess_concat_queries_docs(tokenizer)
+        self.preprocess_set_mask_wildcard_id(tokenizer)
 
     def split_exp_into_sentences(self, token_doc_exp_pred: Tensor, sentences: List[List[str]]):
         sentence_wise_exp = []
@@ -85,7 +75,7 @@ class ExpredInput():
             exp_start += len(sentence_tokens)
         return sentence_wise_exp
 
-    def get_sentence_wise_exps(self, token_doc_exp_preds: Tensor):
+    def get_sentence_wise_exps(self, token_doc_exp_preds: List[List[int]]):
         sentence_wise_exps = []
         for token_doc_exp_pred, sentences in zip(token_doc_exp_preds, self.orig_sentences):
             sentence_wise_exp = self.split_exp_into_sentences(token_doc_exp_pred, sentences)
@@ -114,19 +104,6 @@ class ExpredInput():
 
     def apply_masks_to_inputs(self, input_masks: Union[Tensor, List[Union[List[int], Tensor]]]) -> List[
         Union[List[int], Tensor]]:
-        """This is a tool method
-
-        Args:
-            inputs (List[Union[List[int], Tensor]]): The inputs can be either the concatenation of query and the doc,
-                                                     or be the stand-alon docs. in this case the mask should be at first
-                                                     trimmed using the function extact_masks_for_docs()
-            masks (Union[Tensor, List[Union[List[int], Tensor]]]): 1 or 0, binary masks,
-                                                                   1: this token is preserved
-                                                                   0: this token is to replace by the wildcard
-
-        Returns:
-            List[Union[List[int], Tensor]]: Masked inputs, the token to be masked are replaced by the wildcard id
-        """
         if isinstance(input_masks, list):
             input_masks = Tensor(input_masks)
         self.input_masks = input_masks
@@ -134,7 +111,8 @@ class ExpredInput():
         self.masked_inputs = self.masked_inputs.type(torch.long)
 
     @classmethod
-    def _pool_subtoken_explain(cls, subtoken_doc_explain: List[int], subtoken_doc_spans: List[Tuple[int, int]]):
+    def _pool_subtoken_explain(cls, subtoken_doc_explain: List[int], subtoken_doc_spans: List[Tuple[int, int]]) -> List[
+        int]:
         token_doc_explain = []
         for subtoken_span in subtoken_doc_spans:
             pooled_token_exp = max(subtoken_doc_explain[subtoken_span[0]: subtoken_span[1]])
@@ -152,6 +130,17 @@ class ExpredInput():
     def concat_overead_subtoken_mask(self, subtoken_doc_mask):
         return [1] * (len(self.encoded_queries[0]) + 2) + subtoken_doc_mask + [1]
 
+    def __init__(self, queries, docs, labels, config: ExpredConfig, ann_id: str,
+                 span_tokenizer: BertTokenizerWithSpans):
+        self.orig_queries = queries
+        self.orig_sentences: List[List[List[str]]] = docs
+        self.orig_docs = [list(chain.from_iterable(doc)) for doc in docs]
+        self.orig_labels = labels
+        self.config = config
+        self.class_names = config.class_names
+        self.ann_id = ann_id
+        self.preprocess(span_tokenizer)
+
 
 # TODO: separate the cf_results etc. from the "input" context
 class CounterfactualInput(ExpredInput):
@@ -159,14 +148,6 @@ class CounterfactualInput(ExpredInput):
     custom_doc_masks = None
     custom_input_masks = None
     counterfactual_results = None
-
-    def init_from_dataset(self,
-                          query: str,
-                          doc: List[List[str]],
-                          label: str,
-                          cf_config: CounterfactualConfig,
-                          ann_id: str = None) -> None:
-        super().init_from_dataset([query], [doc], [label], cf_config, ann_id)
 
     def update_custom_masks(self, subtoken_doc_mask, subtoken_input_mask):
         self.custom_doc_masks = torch.Tensor([subtoken_doc_mask])
@@ -187,7 +168,8 @@ class CounterfactualInput(ExpredInput):
     def _extract_custom_doc_mask(cls, request) -> Union[List[int], Any]:
         return request.json['custom_mask']
 
-    def expand_to_subtoken_mask(self, token_mask, subtoken_spans):
+    @staticmethod
+    def expand_to_subtoken_mask(token_mask, subtoken_spans):
         assert len(token_mask) == len(subtoken_spans)
         ret = []
         for mask, (start, end) in zip(token_mask, subtoken_spans):
@@ -201,9 +183,16 @@ class CounterfactualInput(ExpredInput):
             custom_subtoken_input_mask = self.concat_overead_subtoken_mask(custom_subtoken_doc_mask)
             self.update_custom_masks(custom_subtoken_doc_mask, custom_subtoken_input_mask)
 
-    def update_from_ajax_request(self, request, basic_tokenizer, cf_config):
+    def __init__(self, request, basic_tokenizer, cf_config, span_tokenizer):
         orig_query = basic_tokenizer.tokenize(request.json['query'])
         orig_doc = [request.json['doc']]
         orig_label = request.json['label']
+        ann_id = request.json['ann_id']
+        super().__init__([orig_query],
+                         [orig_doc],
+                         [orig_label],
+                         cf_config,
+                         ann_id,
+                         span_tokenizer)
 
-        self.init_from_dataset(orig_query, orig_doc, orig_label, cf_config, self.ann_id)
+        self.update_custom_masks_from_ajax_request(request)

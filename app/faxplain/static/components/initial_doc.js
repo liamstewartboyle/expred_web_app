@@ -1,5 +1,9 @@
 const initial_doc = app.component('initial-doc', {
     props: {
+        ann_id: {
+            type: String,
+            required: true
+        },
         query: {
             type: String,
             required: true
@@ -40,7 +44,8 @@ const initial_doc = app.component('initial-doc', {
                 'POS': this.pos_img_url,
                 "NEG": this.neg_img_url
             },
-            is_cf_example_loading: this.is_cf_example_loading
+            is_cf_example_loading: this.is_cf_example_loading,
+            ann_id: this.ann_id
         }
     },
     template:
@@ -119,6 +124,7 @@ const initial_doc = app.component('initial-doc', {
     methods: {
         select_sentence(sentence) {
             evt = {
+                ann_id: this.ann_id,
                 query: this.query,
                 sentence: sentence,
                 label: this.label

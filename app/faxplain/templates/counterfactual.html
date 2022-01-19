@@ -76,6 +76,7 @@
                         :query="'%%query%%'"
                         :pred="'%%pred%%'"
                         :label="'%%label%%'"
+                        :ann_id="'%%ann_id%%'"
                         :is_cf_example_loading="is_cf_example_loading"
                         :pos_img_url="'%%url_for('static', filename='imgs/POS.png')%%'"
                         :neg_img_url="'%%url_for('static', filename='imgs/NEG.png')%%'"></initial-doc>
@@ -91,6 +92,7 @@
                             :pos_img_url="'%%url_for('static', filename='imgs/POS.png')%%'"
                             :neg_img_url="'%%url_for('static', filename='imgs/NEG.png')%%'"
                             :cf_examples='cf_examples'
+                            :session_id="session_id"
                             :query="'%%query%%'"
                             :label="'%%label%%'">
                     </show-examples>

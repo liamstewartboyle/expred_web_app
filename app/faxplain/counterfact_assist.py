@@ -4,6 +4,7 @@ import torch
 from torch import Tensor, nn
 
 from config import CounterfactualConfig
+from counterfact_result import CounterfactResults
 from expred_utils import Expred
 from inputs import CounterfactualInput
 from tokenizer import BertTokenizerWithSpans
@@ -24,7 +25,7 @@ position_scoring_methods = {'gradient': scoring_position_grad}
 word_scoring_methods = {'gradient': scoring_words_grad}
 
 
-class ExpredCounterAssist():
+class ExpredCounterAssist:
     def __init__(self, cf_config: CounterfactualConfig, model: Expred):
         # self.cf_config = cf_config
         self.max_number_top_positions = cf_config.number_top_positions
@@ -68,7 +69,8 @@ class ExpredCounterAssist():
         return cls_preds['cls_pred'], cls_preds['bert_embeddings']
 
     @staticmethod
-    def _postprocess(cls_preds: Union[Tensor, List[int]], cf_input: CounterfactualInput,
+    def _postprocess(cls_preds: Union[Tensor, List[int]],
+                     cf_input: CounterfactualInput,
                      tokenizer: BertTokenizerWithSpans, pos: int):
         if isinstance(cls_preds, Tensor):
             pred = int(torch.argmax(cls_preds.data, dim=-1).cpu()[0])
@@ -97,8 +99,8 @@ class ExpredCounterAssist():
         }
 
     @classmethod
-    def _pred_is_flipped(cls, cf_res: Dict[str, Union[List[int], List[Dict[str, Union[Tensor, str]]]]]) -> bool:
-        return cf_res['instances'][-1]['pred'] != cf_res['instances'][0]['pred']
+    def _pred_is_flipped(cls, cf_history: List[Dict[str, Union[Tensor, str]]]) -> bool:
+        return cf_history[-1]['pred'] != cf_history[0]['pred']
 
     def _select_candidate_positions(self, position_scores):
         return torch.argsort(position_scores, dim=1)[:,
@@ -110,7 +112,7 @@ class ExpredCounterAssist():
         return candidate_words
 
     def _build_candidate_masked_inputs(self, cf_input, candidate_positions, candidate_words, tokenizer=None):
-        actual_input_length = cf_input.masked_inputs.shape[-1]
+        # actual_input_length = cf_input.masked_inputs.shape[-1]
         number_top_positions = self.number_top_positions
 
         tiled_masked_inputs = torch.tile(torch.unsqueeze(cf_input.masked_inputs, dim=1),
@@ -177,29 +179,32 @@ class ExpredCounterAssist():
         return argmax_cls_preds, tiled_orig_preds, current_cls_preds, current_bert_embeddings
 
     @staticmethod
-    def get_result_insufficient_rationale(cf_input: CounterfactualInput,
-                                          token_mask: List[int],
-                                          subtoken_mask: Tensor,
-                                          span_tokenizer: BertTokenizerWithSpans):
-        return {
-            'instances': [ExpredCounterAssist._postprocess(cls_preds=[0],
-                                                           cf_input=cf_input,
-                                                           tokenizer=span_tokenizer,
-                                                           pos=-1)],
-            'mask': token_mask,
-            'subtoken_mask': subtoken_mask.tolist()
-        }
+    def get_result_insufficient_rationale(
+            session_id: str,
+            cf_input: CounterfactualInput,
+            token_mask: List[int],
+            subtoken_mask: Tensor,
+            span_tokenizer: BertTokenizerWithSpans) -> CounterfactResults:
+        ret = CounterfactResults(session_id=session_id,
+                                 instances=[ExpredCounterAssist._postprocess(cls_preds=[0],
+                                                                             cf_input=cf_input,
+                                                                             tokenizer=span_tokenizer,
+                                                                             pos=-1)],
+                                 mask=token_mask,
+                                 subtoken_mask=subtoken_mask.tolist(),
+                                 ann_id=cf_input.ann_id)
+        return ret
 
-    def geneate_counterfactuals(self, cf_input: CounterfactualInput,
-                                span_tokenizer: BertTokenizerWithSpans):
+    def geneate_counterfactuals(self, session_id: str, cf_input: CounterfactualInput,
+                                span_tokenizer: BertTokenizerWithSpans) -> CounterfactResults:
 
-        print(len(cf_input.overhead_masks[0]))
         subtoken_input_rationale_masks, position_masks = self.compute_masks(cf_input)
         subtoken_docs_rationale_masks = cf_input.extract_masks_for_subtoken_docs(subtoken_input_rationale_masks)
         token_docs_rationale_masks = cf_input.pool_subtoken_docs_explations(subtoken_docs_rationale_masks)
 
         if self.number_top_positions == 0:
-            return self.get_result_insufficient_rationale(cf_input,
+            return self.get_result_insufficient_rationale(session_id,
+                                                          cf_input,
                                                           token_docs_rationale_masks[0],
                                                           subtoken_docs_rationale_masks[0],
                                                           span_tokenizer)
@@ -208,12 +213,12 @@ class ExpredCounterAssist():
 
         cf_input.tile_attention_masks(self.number_top_positions)
 
-        cf_res = {
-            'mask': token_docs_rationale_masks[0],
-            'subtoken_mask': subtoken_docs_rationale_masks[0].tolist(),
-            'instances': [self._postprocess(current_cls_preds, cf_input, span_tokenizer, -1)]
-        }
-
+        # cf_res = {
+        #     'mask': token_docs_rationale_masks[0],
+        #     'subtoken_mask': subtoken_docs_rationale_masks[0].tolist(),
+        #     'instances': [self._postprocess(current_cls_preds, cf_input, span_tokenizer, -1)]
+        # }
+        instances = [self._postprocess(current_cls_preds, cf_input, span_tokenizer, -1)]
         for count_words_replaced in range(self.max_count_word_replacement):
             loss = self.loss_criterion(current_cls_preds, orig_cls_preds).mean()
             grad_wrt_bert_embedding = torch.autograd.grad(loss, current_bert_embeddings)[0].data
@@ -233,12 +238,14 @@ class ExpredCounterAssist():
             current_cls_preds, current_bert_embeddings = self._cls_pred(cf_input.masked_inputs,
                                                                         cf_input.attention_masks)
 
-            cf_res['instances'].append(self._postprocess(current_cls_preds, cf_input, span_tokenizer,
-                                                         position_to_replace.squeeze().data))
+            instances.append(self._postprocess(current_cls_preds, cf_input, span_tokenizer,
+                                               int(position_to_replace.squeeze().data)))
 
-            if count_words_replaced == self.max_count_word_replacement or self._pred_is_flipped(cf_res):
+            if count_words_replaced == self.max_count_word_replacement or self._pred_is_flipped(instances):
                 break
 
-        cf_input.counterfactual_results = cf_res
-
-        return cf_res
+        return CounterfactResults(session_id=session_id,
+                                  instances=instances,
+                                  mask=token_docs_rationale_masks[0],
+                                  subtoken_mask=subtoken_docs_rationale_masks[0].tolist(),
+                                  ann_id=cf_input.ann_id)

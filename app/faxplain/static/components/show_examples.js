@@ -30,6 +30,7 @@ const show_examples = app.component('show-examples', {
             mask: this.cf_examples['mask'],
             custom_mask: JSON.parse(JSON.stringify(this.cf_examples['mask'])),
             examples: this.cf_examples['instances'],
+            ann_id: this.cf_examples['ann_id'],
             plausibility: 3,
             clearance: 3,
             masking_strategy: 'expred',
@@ -51,7 +52,8 @@ const show_examples = app.component('show-examples', {
                 query: this.query,
                 sentence: this.examples[0]['input'],
                 label: this.label,
-                mask: mask
+                mask: mask,
+                ann_id: this.ann_id
             }
             this.eventBus.emit('select-sentence', evt)
         },
@@ -65,8 +67,10 @@ const show_examples = app.component('show-examples', {
         },
         submit_eval() {
             data = {
-                plausibility: this.plausibility,
-                clearance: this.clearance
+                eval: {
+                    plausibility: this.plausibility,
+                    clearance: this.clearance
+                }
             }
             this.eventBus.emit('evaluation_done', data)
         }

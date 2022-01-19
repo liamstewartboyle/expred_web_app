@@ -4,19 +4,29 @@ from flask import Flask, redirect, render_template, request, url_for
 from transformers import BasicTokenizer
 
 from config import CounterfactualConfig
-from counter_assist import ExpredCounterAssist
+from counterfact_assist import ExpredCounterAssist
+from counterfact_result import CounterfactResults
 from counterfact_writer import CounterfactWriter
 from dataset import Dataset
 from debug import get_bogus_pred
 from expred.expred.utils import pad_mask_to_doclen
 from expred_utils import Expred
 from faxplain_utils import dump_quel, machine_rationale_mask_to_html
-from inputs import CounterfactualInput
+from inputs import CounterfactualInput, ExpredInput
 from preprocess import clean
 from search import google_rest_api_search as wiki_search
 from tokenizer import BertTokenizerWithSpans
 from wiki import get_wiki_docs
+import logging
 
+extra = {'app_name': 'counterfactual'}
+logger = logging.getLogger(__name__)
+formatter = logging.Formatter('%(asctime)s %(app_name)s : %(message)s')
+syslog = logging.StreamHandler()
+syslog.setFormatter(formatter)
+logger.setLevel(logging.INFO)
+logger.addHandler(syslog)
+logger = logging.LoggerAdapter(logger, extra)
 
 class CustomFlask(Flask):
     jinja_options = Flask.jinja_options.copy()
@@ -150,13 +160,11 @@ def get_mtl_mask(encoded_queries, encoded_docs):
 @app.route('/counterfactual', methods=['GET', 'POST'])
 def counterfactual():
     ann_id, query, doc, label = dataset.random_select_data(basic_tokenizer)
-
-    cf_input.init_from_dataset(query, doc, label, cf_config, ann_id)
-    cf_input.preprocess(span_tokenizer)
+    cf_input = ExpredInput([query], [doc], [label], cf_config, ann_id, span_tokenizer)
 
     _, cls_preds, exp_preds = expred(cf_input)
     cls_pred_id = cls_preds[0].tolist().index(max(cls_preds[0]))
-    cls_pred = cf_input.class_names[cls_pred_id]
+    cls_pred_name = cf_input.class_names[cls_pred_id]
 
     subtoken_doc_exp_preds = cf_input.extract_masks_for_subtoken_docs(exp_preds)
     token_doc_exp_preds = cf_input.pool_subtoken_docs_explations(subtoken_doc_exp_preds)
@@ -164,34 +172,37 @@ def counterfactual():
     sentence_wise_exps = cf_input.get_sentence_wise_exps(token_doc_exp_preds)
 
     return render_template('counterfactual.html',
+                           ann_id=ann_id,
                            query=' '.join(cf_input.orig_queries[0]),
                            orig_doc=cf_input.orig_sentences[0],
                            explains=sentence_wise_exps[0],
                            label=cf_input.orig_labels[0],
-                           pred=cls_pred)
+                           pred=cls_pred_name)
 
 
 @app.route('/show_example', methods=['GET', 'POST'])
 def show_example():
-    # TODO: flush custom mask for each sentence/each documents
+    logger.info(str(request.json))
+    writer = CounterfactWriter(request)
+    session_id = writer.session_id
+
     cf_config.update_config_from_ajax_request(request)
-    cf_input.update_from_ajax_request(request, basic_tokenizer, cf_config)
-    cf_input.preprocess(span_tokenizer)
-    cf_input.update_custom_masks_from_ajax_request(request)
 
-    cf_examples = counter_assist.geneate_counterfactuals(cf_input, span_tokenizer)
-    cf_results = {"cf_examples": cf_examples,
-                  'ann_id': cf_input.ann_id}
-    cf_input.counterfactual_results = cf_results
+    cf_input = CounterfactualInput(request, basic_tokenizer,
+                                   cf_config, span_tokenizer)
 
-    writer.write_cf_example(cf_input, cf_config)
+    cf_results = counter_assist.geneate_counterfactuals(session_id, cf_input, span_tokenizer)
 
-    return cf_results
+    writer.write_cf_example(cf_results, cf_config)
+
+    return cf_results.todict()
 
 
 @app.route('/reg_eval', methods=['POST'])
 def register_evaluation():
-    writer.write_evaluation(cf_input, cf_config, request.json)
+    writer = CounterfactWriter(request)
+    cf_results = CounterfactResults.from_dict(request.json)
+    writer.write_evaluation(cf_results, cf_config, request.json['eval'])
     return {'placeholder': None}
 
 
@@ -200,9 +211,8 @@ if False:
 else:
     print("Loading models")
 
+    # TODO: initialize config for each session individually
     cf_config = CounterfactualConfig()
-
-    cf_input = CounterfactualInput()
 
     span_tokenizer = BertTokenizerWithSpans.from_pretrained(cf_config.bert_dir)
     basic_tokenizer = BasicTokenizer()
@@ -212,8 +222,6 @@ else:
     dataset = Dataset(cf_config.dataset_name, cf_config.dataset_base_dir)
 
     counter_assist = ExpredCounterAssist(cf_config, expred)
-
-    writer = CounterfactWriter()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
