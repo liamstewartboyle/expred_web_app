@@ -1,11 +1,13 @@
 from unittest import TestCase
+
 import torch
-from inputs import ExpredInput
-from config import CounterfactualConfig
-from tokenizer import BertTokenizerWithSpans
 from transformers import BasicTokenizer
-from expred_utils import Expred
+
+from config import CounterfactualConfig
 from counterfact_assist import MLMCounterAssist
+from expred_utils import Expred
+from inputs import ExpredInput
+from tokenizer import BertTokenizerWithSpans
 
 
 class TestExpredInput(TestCase):

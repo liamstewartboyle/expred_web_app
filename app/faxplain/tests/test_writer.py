@@ -1,13 +1,12 @@
-from copy import deepcopy
-import os
 import pickle
 import unittest
+
 import re
+from copy import deepcopy
+
 from config import CounterfactualConfig
+from counterfact_writer import CounterfactWriter
 from inputs import CounterfactualInput
-
-from counterfact_writer import FaxplainWriter, CounterfactWriter
-
 
 query = 'what is that ?'.split()
 doc = 'that be a bird . and this is a dog .'.split()
@@ -15,16 +14,16 @@ label = 'POS'
 ann_id = 'test_0'
 
 cf_history = [
-            {'replaced': -1,
-             'input': 'that be a bird . and this is a dog .'.split(),
-             'pred': 'POS'},
-            {'replaced': 1,
-             'input': 'that is a bird . and this is a dog .'.split(),
-             'pred': 'POS'},
-            {'replaced': 1,
-             'input': 'that was a bird . and this is a dog .'.split(),
-             'pred': 'NEG'}
-        ]
+    {'replaced': -1,
+     'input': 'that be a bird . and this is a dog .'.split(),
+     'pred': 'POS'},
+    {'replaced': 1,
+     'input': 'that is a bird . and this is a dog .'.split(),
+     'pred': 'POS'},
+    {'replaced': 1,
+     'input': 'that was a bird . and this is a dog .'.split(),
+     'pred': 'NEG'}
+]
 
 history_should = [{'pos': 1,
                    'word': 'is',
@@ -34,7 +33,7 @@ history_should = [{'pos': 1,
                    'pred': 'NEG'}]
 
 cf_res = {
-    'cf_examples':{
+    'cf_examples': {
         'mask': [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
         'subtoken_mask': [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
         'instances': cf_history
@@ -43,7 +42,7 @@ cf_res = {
 }
 
 output_should = {'ann_id': ann_id,
-                 'sentence': doc, 
+                 'sentence': doc,
                  'token_mask': [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
                  'subtoken_mask': [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
                  'masking_method': 'expred',
@@ -63,31 +62,32 @@ cf_input.counterfactual_results = cf_res
 writer = CounterfactWriter()
 
 res_fname_should = f'counterfactual_res/res_{writer.session_id}.pkl'
-     
+
 eval_fname_should = f'counterfactual_res/eval_{writer.session_id}.pkl'
 
 eval_mock = {'plausibility': 3,
              'clearance': 4}
 
+
 class TestCounterfactWriter(unittest.TestCase):
     def test_session_id(self):
         sessionid_pattern = re.compile("[0-9a-f]{8}")
         self.assertTrue(sessionid_pattern.match(writer.session_id))
-        
+
     def test_get_cf_history(self):
-        history = writer.get_counterfactual_history(cf_history[1:]) 
+        history = writer.get_counterfactual_history(cf_history[1:])
         self.assertSequenceEqual(history, history_should)
-        
+
     def test___get_output_data(self):
         output = writer._get_output_data(cf_input, config)
         self.assertDictEqual(output, output_should)
-        
+
     def test_write_cf_example(self):
         writer.write_cf_example(cf_input, config)
         with open(res_fname_should, 'rb') as fin:
             res = pickle.load(fin)
         self.assertDictEqual(output_should, res)
-    
+
     def test_write_evaluation(self):
         writer.write_evaluation(cf_input, config, eval_mock)
         with open(eval_fname_should, 'rb') as fin:

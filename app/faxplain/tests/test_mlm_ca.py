@@ -1,4 +1,3 @@
-from pprint import pprint
 from unittest import TestCase
 
 import torch
@@ -7,7 +6,7 @@ from transformers import BasicTokenizer
 from config import CounterfactualConfig
 from counterfact_assist import MLMCounterAssist
 from expred_utils import Expred
-from inputs import ExpredInput, CounterfactualInput
+from inputs import CounterfactualInput
 from tokenizer import BertTokenizerWithSpans
 
 
