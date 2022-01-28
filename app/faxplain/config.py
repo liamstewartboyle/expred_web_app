@@ -20,8 +20,7 @@ class CounterfactualConfig(ExpredConfig):
 
     bert_dir = 'bert-base-uncased'
 
-    position_scoring_method = 'gradient'
-    word_scoring_method = 'gradient'
+    selection_strategy = 'hotflip'
     use_custom_mask = False
     masking_method = 'expred'
     constraints = {
@@ -36,8 +35,7 @@ class CounterfactualConfig(ExpredConfig):
         self.load_from_pretrained = True
 
     def update_config_from_ajax_request(self, request) -> None:
-        self.position_scoring_method = request.json['position_scoring_method']
-        self.word_scoring_method = request.json['word_scoring_method']
+        self.selection_strategy = request.json['selection_strategy']
         self.use_custom_mask = request.json['use_custom_mask']
         self.masking_method = request.json['masking_method']
         self.constraints = {

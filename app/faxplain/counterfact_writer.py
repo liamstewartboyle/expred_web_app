@@ -75,8 +75,7 @@ class CounterfactWriter(FaxplainWriter):
         session_id = cf_results.session_id
 
         masking_method = cf_conf.masking_method
-        position_method = cf_conf.position_scoring_method
-        word_method = cf_conf.word_scoring_method
+        selection_strategy = cf_conf.selection_strategy
         gramma = cf_conf.constraints['gramma']
 
         token_mask = cf_results.mask
@@ -90,8 +89,7 @@ class CounterfactWriter(FaxplainWriter):
                 'token_mask': token_mask,
                 'subtoken_mask': subtoken_mask,
                 'masking_method': masking_method,
-                'position_scoring_method': position_method,
-                'word_scoring_method': word_method,
+                'selection_strategy': selection_strategy,
                 'gramma': gramma,
                 'history': history}
 

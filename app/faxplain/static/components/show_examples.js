@@ -34,6 +34,7 @@ const show_examples = app.component('show-examples', {
             plausibility: 3,
             clearance: 3,
             masking_strategy: 'expred',
+            selection_strategy: 'hotflip',
             try_others: false,
             satisfy: false
         }
@@ -53,6 +54,7 @@ const show_examples = app.component('show-examples', {
                 sentence: this.examples[0]['input'],
                 label: this.label,
                 mask: mask,
+                selection_strategy: this.selection_strategy,
                 ann_id: this.ann_id
             }
             this.eventBus.emit('select-sentence', evt)
@@ -78,12 +80,12 @@ const show_examples = app.component('show-examples', {
     template:
     /*html*/
     `
-    <a class='display-7' data-bs-toggle='collapse' href='#user-guidance'>
-        User Guidance...
-    </a>
-    <div class='card card-body container-fluid collapse' id='user-guidance'>
-        <div class='mb-1'>
-            Place holder for the user guidance.
+    <div class='mb-1'>
+        <a class='display-7' data-bs-toggle='collapse' href='#user-guidance'>
+            User Guidance...
+        </a>
+        <div class='card card-body container-fluid collapse mb-1' id='user-guidance'>
+                Place holder for the user guidance.
         </div>
     </div>
     <div class='card'>
@@ -209,50 +211,17 @@ const show_examples = app.component('show-examples', {
                             </div>
                             <div class='row mb-1'>
                                 <div class='col'>
-                                    <label for="attrs">Attribution Strategy:</label>
-                                </div>
-                                <div class='col'>
-                                    <select class='form-select' name="attrs" id="attrs">
-                                        <optgroup label="Gradient-based">
-                                            <option value="gradient">Gradient Attribution (HotFlip)</option>
-                                        </optgroup>
-                                        <optgroup label="Hierarchical">
-                                            <option value="hierarchical">Hierarchical importance</option>
-                                        </optgroup>
-                                        <optgroup label="Attention-based">
-                                            <option value="att">Attention score</option>
-                                        </optgroup>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class='row mb-1'>
-                                <div class='col'>
                                     <label for="new_words">Replacement Retrieving Strategy:</label>
                                 </div>
                                 <div class='col'>
-                                    <select class='form-select' name="new_words" id="new_words">
+                                    <select class='form-select' v-model='selection_strategy' name="new_words" id="new_words">
                                         <optgroup label="Gradient-based">
-                                            <option value="gradient">Gradient Attribution (HotFlip)</option>
+                                            <option value="hotflip">Taylor-expansion (HotFlip)</option>
                                         </optgroup>
                                         <optgroup label="Masked-model-based">
-                                            <option value="ptuning">P-Tuning</option>
-                                            <option value="t5">T5 model</option>
+                                            <option value="mlm">Masked Language Model</option>
                                         </optgroup>
                                     </select>
-                                </div>
-                            </div>
-                            <div class='row mb-1 mt-4'>
-                                <div class='col'>
-                                    <input class='form-check-input me-1' type="checkbox" id="gramma_res" name="gramma_res">
-                                    <label for="gramma_res"> Grammatical restriction </label>
-                                </div>
-                                <div class='col'>
-                                    <input class='form-check-input me-1' type="checkbox" id="ins" name="ins">
-                                    <label for="ins">Insertion</label>
-                                </div>
-                                <div class='col'>
-                                    <input class='form-check-input me-1' type="checkbox" id="del" name="del">
-                                    <label for="del">Deletion</label>
                                 </div>
                             </div>
                             <div class='row mt-4'>

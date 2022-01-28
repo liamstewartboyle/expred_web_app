@@ -192,6 +192,12 @@ def show_example():
         cf_input.apply_subtoken_input_rationale_masks(exp_preds)
         cf_input.apply_token_doc_position_masks(cf_input.token_doc_rationale_masks)
 
+    selection_strategy = request.json['selection_strategy']
+    if selection_strategy == 'mlm':
+        counter_assist = MLMCounterAssist(cf_config, expred)
+    else:
+        counter_assist = HotflipCounterAssist(cf_config, expred)
+
     cf_results = counter_assist.geneate_counterfactuals(session_id, cf_input, span_tokenizer)
 
     writer.write_cf_example(cf_results, cf_config)

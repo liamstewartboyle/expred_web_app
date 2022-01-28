@@ -25,8 +25,8 @@ def scoring_words_grad(grad_wrt_embd: Tensor, word_embedding: Tensor) -> Tensor:
     return word_scores
 
 
-position_scoring_methods = {'gradient': scoring_position_grad}
-word_scoring_methods = {'gradient': scoring_words_grad}
+position_scoring_methods = {'hotflip': scoring_position_grad, 'mlm': None}
+word_scoring_methods = {'hotflip': scoring_words_grad, 'mlm': None}
 
 
 class ExpredCounterAssist:
@@ -38,14 +38,13 @@ class ExpredCounterAssist:
         self.cf_config = cf_config
         self.device = cf_config.device
         self.max_input_len = cf_config.max_input_len
-        self.position_scoring_method = cf_config.position_scoring_method
-        self.word_scoring_method = cf_config.word_scoring_method
+        self.selection_strategy = cf_config.selection_strategy
         self.model = model
         self.init_model()
         self.word_embedding = self._get_word_embedding()
         self.loss_criterion = nn.CrossEntropyLoss(reduction="none")
-        self.scoring_positions = position_scoring_methods[cf_config.position_scoring_method]
-        self.scoring_words = word_scoring_methods[cf_config.word_scoring_method]
+        self.scoring_positions = position_scoring_methods[cf_config.selection_strategy]
+        self.scoring_words = word_scoring_methods[cf_config.selection_strategy]
 
     def init_model(self):
         self.model = self.model.to(self.device)
@@ -54,8 +53,7 @@ class ExpredCounterAssist:
 
     def _init_cls_module(self):
         self.model.cls_module.return_cls_embedding = False
-        if self.position_scoring_method == 'gradient' or self.word_scoring_method == 'gradient':
-            self.model.cls_module.return_bert_embedding = True
+        self.model.cls_module.return_bert_embedding = True
 
     def _get_word_embedding(self) -> Tensor:
         return self.model.cls_module.bare_bert.embeddings.word_embeddings.weight.unsqueeze(dim=0)

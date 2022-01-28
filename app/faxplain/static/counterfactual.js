@@ -20,10 +20,14 @@ const app = Vue.createApp({
             use_custom_mask = false
             custom_mask = undefined
             masking_method = 'expred'
+            selection_strategy = 'hotflip'
             if (evt.hasOwnProperty('mask') && !(typeof evt['mask'] === "undefined")) {
                 use_custom_mask = true
                 custom_mask = evt['mask']
                 masking_method = 'custom'
+            }
+            if (evt.hasOwnProperty('selection_strategy')) {
+                selection_strategy = evt['selection_strategy']
             }
             let data = {
                 ann_id: evt['ann_id'],
@@ -34,8 +38,7 @@ const app = Vue.createApp({
                 use_custom_mask: use_custom_mask,
                 custom_mask: custom_mask,
                 masking_method: masking_method,
-                position_scoring_method: 'gradient',
-                word_scoring_method: 'gradient',
+                selection_strategy: selection_strategy,
                 gramma: false
             }
 
