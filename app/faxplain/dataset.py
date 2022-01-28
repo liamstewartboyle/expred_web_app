@@ -30,6 +30,7 @@ class Dataset():
     def random_select_data(self, basic_tokenizer: BasicTokenizer) -> CounterfactualInput:
         ann_id = random.choice(list(self.raw_data.keys()))
         # ann_id = random.choice(['posR_018.txt', 'negR_018.txt'])
+        ann_id = 'negR_540.txt'
         print(ann_id)
         selected_ann = self.raw_data[ann_id]
         docid = selected_ann.docid

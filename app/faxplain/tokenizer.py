@@ -2,7 +2,7 @@ from itertools import chain
 from typing import List, Dict, Tuple, Union
 
 import os
-from torch.functional import Tensor
+from torch import Tensor
 from transformers import BertTokenizer
 from transformers import BasicTokenizer
 
@@ -25,12 +25,12 @@ class BertTokenizerWithSpans(BertTokenizer):
             span_start = span_end
         return spans
 
-    def encode(self, tokens:List[str]) -> Dict[str, Union[Tuple[int, int], List[int]]]:
+    def encode_doc_with_spans(self, tokens:List[str]) -> Dict[str, Union[Tuple[int, int], List[int]]]:
         encoded_input = []
         input_span = []
         span_start = 0
         for token in tokens:
-            subtokens = super().encode(token, add_special_tokens=False)
+            subtokens = self.encode(token, add_special_tokens=False)
             encoded_input.extend(subtokens)
             span_end = span_start + len(subtokens)
             input_span.append((span_start, span_end))
@@ -41,14 +41,15 @@ class BertTokenizerWithSpans(BertTokenizer):
         encoded_docs = []
         sub_token_spans = []
         for token_doc in token_docs:
-            encoded_doc, spans = self.encode(token_doc)
+            encoded_doc, spans = self.encode_doc_with_spans(token_doc)
             encoded_docs.append(encoded_doc)
             sub_token_spans.append(spans)
         return encoded_docs, sub_token_spans
 
-    def decode(self, encoded:Tensor, spans:List[Tuple[int, int]]) -> List[str]:
+    def decode(self, encoded, spans:List[Tuple[int, int]]) -> List[str]:
         ret = []
-        encoded = encoded.tolist()
+        if isinstance(encoded, Tensor):
+            encoded = encoded.tolist()
         for i, (start, end) in enumerate(spans):
             token = ''
             for j in range(start, end):
@@ -70,7 +71,7 @@ class BertTokenizerWithSpans(BertTokenizer):
                                                     for w in ev.text.split()))
                     if len(text) == 0:
                         continue
-                    text = self.encode(text, add_special_tokens=False)
+                    text = self.encode_doc_with_spans(text, add_special_tokens=False)
                     evs.append(Evidence(text=tuple(text),
                                         docid=ev.docid,
                                         start_token=ev.start_token,
@@ -81,7 +82,7 @@ class BertTokenizerWithSpans(BertTokenizer):
             query = list(chain.from_iterable(self.tokenize(w)
                                              for w in ann.query.split()))
             if len(query) > 0:
-                query = self.encode(query, add_special_tokens=False)
+                query = self.encode_doc_with_spans(query, add_special_tokens=False)
             else:
                 query = []
             ret.append(Annotation(annotation_id=ann.annotation_id,

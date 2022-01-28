@@ -4,7 +4,7 @@ from flask import Flask, redirect, render_template, request, url_for
 from transformers import BasicTokenizer
 
 from config import CounterfactualConfig
-from counterfact_assist import ExpredCounterAssist
+from counterfact_assist import ExpredCounterAssist, HotflipCounterAssist, MLMCounterAssist
 from counterfact_result import CounterfactResults
 from counterfact_writer import CounterfactWriter
 from dataset import Dataset
@@ -163,13 +163,10 @@ def counterfactual():
     cf_input = ExpredInput([query], [doc], [label], cf_config, ann_id, span_tokenizer)
 
     _, cls_preds, exp_preds = expred(cf_input)
-    cls_pred_id = cls_preds[0].tolist().index(max(cls_preds[0]))
-    cls_pred_name = cf_input.class_names[cls_pred_id]
+    cls_pred_name = expred.convert_preds_to_names(cls_preds, cf_input.class_names)[0]
+    cf_input.apply_subtoken_input_rationale_masks(exp_preds)
 
-    subtoken_doc_exp_preds = cf_input.extract_masks_for_subtoken_docs(exp_preds)
-    token_doc_exp_preds = cf_input.pool_subtoken_docs_explations(subtoken_doc_exp_preds)
-
-    sentence_wise_exps = cf_input.get_sentence_wise_exps(token_doc_exp_preds)
+    sentence_wise_exps = cf_input.get_sentence_wise_exps(cf_input.token_doc_rationale_masks)
 
     return render_template('counterfactual.html',
                            ann_id=ann_id,
@@ -188,8 +185,12 @@ def show_example():
 
     cf_config.update_config_from_ajax_request(request)
 
-    cf_input = CounterfactualInput(request, basic_tokenizer,
-                                   cf_config, span_tokenizer)
+    cf_input = CounterfactualInput.from_ajax_request_factory(request, basic_tokenizer, cf_config, span_tokenizer)
+    if cf_input.subtoken_input_position_masks is None:
+        _, cls_preds, exp_preds = expred(cf_input)
+        # print('exp_preds: ', exp_preds)
+        cf_input.apply_subtoken_input_rationale_masks(exp_preds)
+        cf_input.apply_token_doc_position_masks(cf_input.token_doc_rationale_masks)
 
     cf_results = counter_assist.geneate_counterfactuals(session_id, cf_input, span_tokenizer)
 
@@ -221,7 +222,8 @@ else:
 
     dataset = Dataset(cf_config.dataset_name, cf_config.dataset_base_dir)
 
-    counter_assist = ExpredCounterAssist(cf_config, expred)
+    # counter_assist = HotflipCounterAssist(cf_config, expred)
+    counter_assist = MLMCounterAssist(cf_config, expred)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
