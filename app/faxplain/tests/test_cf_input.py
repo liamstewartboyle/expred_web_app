@@ -5,9 +5,9 @@ from transformers import BasicTokenizer
 
 from config import CounterfactualConfig
 from counterfact_assist import MLMCounterAssist
-from expred_utils import Expred
-from inputs import ExpredInput
-from tokenizer import BertTokenizerWithSpans
+from expred.expred.expred import Expred
+from expred.expred.inputs import ExpredInput
+from expred.expred.tokenizer import BertTokenizerWithSpans
 
 
 class TestExpredInput(TestCase):
@@ -29,7 +29,7 @@ class TestExpredInput(TestCase):
                                  docs=docs,
                                  labels=labels,
                                  config=cf_config,
-                                 ann_id=None,
+                                 ann_ids=None,
                                  span_tokenizer=span_tokenizer)
 
     alternaive_cls_preds = torch.tensor([0], dtype=torch.long)
@@ -48,7 +48,7 @@ class TestExpredInput(TestCase):
                            docs=[[input_doc]],
                            labels=['POS'],
                            config=cf_config,
-                           ann_id=None,
+                           ann_ids=None,
                            span_tokenizer=span_tokenizer)
 
     encoded_doc_should = [1045, 2052, 2360, 2008, 1045, 2514, 2023, 2003, 7687, 1037, 6569, 3993, 3185, 1012]

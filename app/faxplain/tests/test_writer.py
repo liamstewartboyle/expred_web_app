@@ -7,6 +7,9 @@ from copy import deepcopy
 from config import CounterfactualConfig
 from counterfact_writer import CounterfactWriter
 from inputs import CounterfactualInput
+from expred.expred.tokenizer import BertTokenizerWithSpans
+
+span_tokenizer = BertTokenizerWithSpans.from_pretrained('bert-base-uncased')
 
 query = 'what is that ?'.split()
 doc = 'that be a bird . and this is a dog .'.split()
@@ -53,10 +56,15 @@ output_should = {'ann_id': ann_id,
 
 eval_should = deepcopy(output_should)
 eval_should['plausibility'] = 3
-eval_should['clearance'] = 4
+eval_should['meaningfulness'] = 4
+eval_should['risk'] = 3
 config = CounterfactualConfig()
-cf_input = CounterfactualInput()
-cf_input.init_from_dataset(query, doc, label, config, ann_id)
+cf_input = CounterfactualInput(queries=[query],
+                               docs=[doc],
+                               labels=[label],
+                               config=config,
+                               ann_ids=ann_id,
+                               span_tokenizer=span_tokenizer)
 cf_input.counterfactual_results = cf_res
 
 writer = CounterfactWriter()
@@ -66,7 +74,8 @@ res_fname_should = f'counterfactual_res/res_{writer.session_id}.pkl'
 eval_fname_should = f'counterfactual_res/eval_{writer.session_id}.pkl'
 
 eval_mock = {'plausibility': 3,
-             'clearance': 4}
+             'meaningfulness': 4,
+             'risk': 5}
 
 
 class TestCounterfactWriter(unittest.TestCase):

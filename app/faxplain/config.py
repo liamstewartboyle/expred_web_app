@@ -1,14 +1,11 @@
-from expred.expred.config import ExpredConfig
+from expred import ExpredConfig
 
 application = 'counterfactual'
 
 
 class FaxplainConfig(ExpredConfig):
     def __init__(self) -> None:
-        super().__init__(dataset_name='fever',
-                         mtl_url='https://www.dropbox.com/s/qwinyap4kbxzdvn/evidence_token_identifier.pt?dl=1',
-                         cls_url='https://www.dropbox.com/s/oc3qrgl0tqn9mqd/evidence_classifier.pt?dl=1',
-                         class_names=["SUPPORTS", "REFUTES"])
+        super().__init__(dataset_name='movies')
         self.load_from_pretrained = True
 
 
@@ -28,10 +25,7 @@ class CounterfactualConfig(ExpredConfig):
     }
 
     def __init__(self) -> None:
-        super().__init__(dataset_name='movies',
-                         mtl_url='https://www.dropbox.com/s/qen0vx2uz6ksn3m/evidence_token_identifier.pt?dl=1',
-                         cls_url='https://www.dropbox.com/s/0sfrdykcg6cf6kh/evidence_classifier.pt?dl=1',
-                         class_names=['NEG', 'POS'])
+        super().__init__(dataset_name='movies')
         self.load_from_pretrained = True
 
     def update_config_from_ajax_request(self, request) -> None:

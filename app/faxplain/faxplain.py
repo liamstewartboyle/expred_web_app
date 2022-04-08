@@ -4,18 +4,16 @@ from flask import Flask, redirect, render_template, request, url_for
 from transformers import BasicTokenizer
 
 from config import CounterfactualConfig
-from counterfact_assist import ExpredCounterAssist, HotflipCounterAssist, MLMCounterAssist
+from counterfact_assist import HotflipCounterAssist, MLMCounterAssist
 from counterfact_result import CounterfactResults
 from counterfact_writer import CounterfactWriter
-from dataset import Dataset
+from expred import BertDataset, Expred, ExpredInput, BertTokenizerWithSpans
 from debug import get_bogus_pred
 from expred.expred.utils import pad_mask_to_doclen
-from expred_utils import Expred
 from faxplain_utils import dump_quel, machine_rationale_mask_to_html
-from inputs import CounterfactualInput, ExpredInput
+from inputs import CounterfactualInput
 from preprocess import clean
 from search import google_rest_api_search as wiki_search
-from tokenizer import BertTokenizerWithSpans
 from wiki import get_wiki_docs
 import logging
 
@@ -27,6 +25,7 @@ syslog.setFormatter(formatter)
 logger.setLevel(logging.INFO)
 logger.addHandler(syslog)
 logger = logging.LoggerAdapter(logger, extra)
+
 
 class CustomFlask(Flask):
     jinja_options = Flask.jinja_options.copy()
@@ -160,11 +159,11 @@ def get_mtl_mask(encoded_queries, encoded_docs):
 @app.route('/counterfactual', methods=['GET', 'POST'])
 def counterfactual():
     ann_id, query, doc, label = dataset.random_select_data(basic_tokenizer)
-    cf_input = ExpredInput([query], [doc], [label], cf_config, ann_id, span_tokenizer)
+    cf_input = ExpredInput([query], [doc], [label], cf_config, [ann_id], span_tokenizer)
 
-    _, cls_preds, exp_preds = expred(cf_input)
+    ret = expred(cf_input)
+    cls_preds = ret['cls_preds']['cls_pred']
     cls_pred_name = expred.convert_preds_to_names(cls_preds, cf_input.class_names)[0]
-    cf_input.apply_subtoken_input_rationale_masks(exp_preds)
 
     sentence_wise_exps = cf_input.get_sentence_wise_exps(cf_input.token_doc_rationale_masks)
 
@@ -187,8 +186,8 @@ def show_example():
 
     cf_input = CounterfactualInput.from_ajax_request_factory(request, basic_tokenizer, cf_config, span_tokenizer)
     if cf_input.subtoken_input_position_masks is None:
-        _, cls_preds, exp_preds = expred(cf_input)
-        # print('exp_preds: ', exp_preds)
+        expred_output = expred(cf_input)
+        exp_preds = expred_output['mtl_preds']['exp_preds']
         cf_input.apply_subtoken_input_rationale_masks(exp_preds)
         cf_input.apply_token_doc_position_masks(cf_input.token_doc_rationale_masks)
 
@@ -226,10 +225,8 @@ else:
 
     expred = Expred(cf_config)
 
-    dataset = Dataset(cf_config.dataset_name, cf_config.dataset_base_dir)
+    dataset = BertDataset(cf_config.dataset_name)
 
-    # counter_assist = HotflipCounterAssist(cf_config, expred)
-    counter_assist = MLMCounterAssist(cf_config, expred)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host='127.0.0.1', port=8080)

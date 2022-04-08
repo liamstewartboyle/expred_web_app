@@ -106,6 +106,7 @@ class CounterfactWriter(FaxplainWriter):
                          eval: Dict):
         output = self._get_output_data(cf_results, cf_conf)
         output['plausibility'] = eval['plausibility']
-        output['clearance'] = eval['clearance']
+        output['meaningfulness'] = eval['meaningfulness']
+        output['risk'] = eval['risk']
         with open(self.eval_fname, 'ab+') as fout:
             pickle.dump(output, fout)

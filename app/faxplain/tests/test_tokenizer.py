@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from tokenizer import BertTokenizerWithSpans
+from expred.expred.tokenizer import BertTokenizerWithSpans
 
 
 class TestBertTokenizerWithSpans(TestCase):

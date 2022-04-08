@@ -1,4 +1,3 @@
-from pprint import pprint
 from typing import Dict, List, Tuple, Union, Any
 
 import torch
@@ -7,9 +6,8 @@ from transformers import BasicTokenizer
 
 from config import CounterfactualConfig
 from counterfact_result import CounterfactResults
-from expred_utils import Expred
-from inputs import CounterfactualInput, ExpredInput
-from tokenizer import BertTokenizerWithSpans
+from expred import Expred, ExpredInput, BertTokenizerWithSpans
+from inputs import CounterfactualInput
 
 
 def scoring_position_grad(grad_wrt_embd: Tensor, bert_embeddings: Tensor,
@@ -77,11 +75,7 @@ class ExpredCounterAssist:
                      tokenizer: BertTokenizerWithSpans,
                      pos: int,
                      is_subtoken_pos=True):
-        if isinstance(cls_preds, Tensor):
-            pred = int(torch.argmax(cls_preds.data, dim=-1).cpu()[0])
-        else:
-            pred = cls_preds[0]
-        pred = cf_input.class_names[pred]
+        pred = cf_input.cls_preds_to_class_name(cls_preds)
 
         subtoken_counterfactual_doc = cf_input.extract_subtoken_docs(cf_input.expred_inputs)[0]
         token_string_counterfactual_doc = tokenizer.decode(subtoken_counterfactual_doc,
@@ -170,7 +164,7 @@ class ExpredCounterAssist:
                                  instances=[original_instance],
                                  mask=cf_input.token_doc_rationale_masks[0],
                                  subtoken_mask=cf_input.subtoken_doc_rationale_masks[0],
-                                 ann_id=cf_input.ann_id)
+                                 ann_id=cf_input.ann_ids)
         return ret
 
     def _do_counterfactual_generation(self,
@@ -206,7 +200,7 @@ class ExpredCounterAssist:
                                   instances=cf_history,
                                   mask=mask,
                                   subtoken_mask=cf_input.subtoken_doc_rationale_masks[0].tolist(),
-                                  ann_id=cf_input.ann_id)
+                                  ann_id=cf_input.ann_ids)
 
 
 class HotflipCounterAssist(ExpredCounterAssist):
@@ -310,7 +304,7 @@ class MLMCounterAssist(ExpredCounterAssist):
                                        docs=docs,
                                        labels=labels,
                                        config=self.cf_config,
-                                       ann_id=None,
+                                       ann_ids=None,
                                        span_tokenizer=span_tokenizer)
         token_doc_rationale_masks = reference_input.token_doc_rationale_masks * len(unmasker_results)
         token_doc_position_masks = reference_input.token_doc_position_masks * len(unmasker_results)

@@ -32,7 +32,8 @@ const show_examples = app.component('show-examples', {
             examples: this.cf_examples['instances'],
             ann_id: this.cf_examples['ann_id'],
             plausibility: 3,
-            clearance: 3,
+            meaningfulness: 3,
+            risk: 3,
             masking_strategy: 'expred',
             selection_strategy: 'hotflip',
             try_others: false,
@@ -71,7 +72,8 @@ const show_examples = app.component('show-examples', {
             data = {
                 eval: {
                     plausibility: this.plausibility,
-                    clearance: this.clearance
+                    meaningfulness: this.meaningfulness,
+                    risk: this.risk
                 }
             }
             this.eventBus.emit('evaluation_done', data)
@@ -144,10 +146,18 @@ const show_examples = app.component('show-examples', {
                                     <input v-model='plausibility' type="range" class="form-range" min="1" max="5" step="1" id="plausibility"> 
                                 </div>
                                 <div class='col'>
-                                    <label for="clearance" class="form-label">Clearance: ({{clearance}}/5)</label>
+                                    <label for="meaningfulness" class="form-label">Meaningfulness: ({{meaningfulness}}/5)</label>
                                 </div>
                                 <div class='col'>
-                                    <input v-model='clearance' type="range" class="form-range" min="1" max="5" step="1" id="clearance"> 
+                                    <input v-model='meaningfulness' type="range" class="form-range" min="1" max="5" step="1" id="meaningfulness"> 
+                                </div>
+                            </div>
+                            <div class='row mb-1'>
+                                <div class='col'>
+                                    <label for="risk" class="form-label col">Risk of the model: ({{risk}}/5)</label>
+                                </div>
+                                <div class='col'>
+                                    <input v-model='risk' type="range" class="form-range" min="1" max="5" step="1" id="risk"> 
                                 </div>
                             </div>
                             <div class='row mt-4'>
