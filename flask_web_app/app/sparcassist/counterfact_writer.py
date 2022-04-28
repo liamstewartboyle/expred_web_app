@@ -1,21 +1,20 @@
+import csv
 import os
 import pickle
 from random import random
-import csv
 from typing import Dict, List, Union, Any
 
 from werkzeug.local import LocalProxy
 
-from counterfact_result import CounterfactResults
-
-from config import CounterfactualConfig
+from .counterfact_result import CounterfactResults
+from ..config import CounterfactualConfig
 
 
 class FaxplainWriter:
     def __init__(self, session_id: str = None) -> None:
         if not session_id:
             self.session_id = hex(int(random() * 1e13))[2:]
-        self.base_dir = './'
+        self.base_dir = '../'
 
         self.res_folder = self.base_dir + 'res/'
         FaxplainWriter.maybe_create_res_folder(self.res_folder)
@@ -51,7 +50,7 @@ class CounterfactWriter(FaxplainWriter):
             self.session_id = hex(int(random() * 1e13))[2:]
         else:
             self.session_id = request.json['session_id']
-        self.base_dir = './'
+        self.base_dir = '../'
         self.res_folder = self.base_dir + 'counterfactual_res/'
         self.init_res_fnames()
         CounterfactWriter.maybe_create_res_folder(self.res_folder)

@@ -1,11 +1,11 @@
 # Byte-compiled / optimized / DLL files
-app/faxplain/counterfactual_res/*
-app/faxplain/data
+flask_web_app/faxplain/counterfactual_res/*
+flask_web_app/faxplain/data
 .idea
 *.zip
 *.pt
 .venv
-app/.ipynb_checkpoints/
+flask_web_app/.ipynb_checkpoints/
 app/data/*.csv
 app/data/*.txt
 __pycache__/

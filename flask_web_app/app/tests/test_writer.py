@@ -5,8 +5,8 @@ import re
 from copy import deepcopy
 
 from config import CounterfactualConfig
-from counterfact_writer import CounterfactWriter
-from inputs import CounterfactualInput
+from sparcassist.counterfact_writer import CounterfactWriter
+from sparcassist.counterfact_inputs import CounterfactualInput
 from expred.expred.tokenizer import BertTokenizerWithSpans
 
 span_tokenizer = BertTokenizerWithSpans.from_pretrained('bert-base-uncased')

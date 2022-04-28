@@ -1,30 +1,38 @@
+import logging
 import pickle
 
+from expred import (
+    BertDataset,
+    Expred,
+    ExpredInput,
+    BertTokenizerWithSpans
+)
 from flask import Flask, redirect, render_template, request, url_for
 from transformers import BasicTokenizer
 
-from config import CounterfactualConfig
-from counterfact_assist import HotflipCounterAssist, MLMCounterAssist
-from counterfact_result import CounterfactResults
-from counterfact_writer import CounterfactWriter
-from expred import BertDataset, Expred, ExpredInput, BertTokenizerWithSpans
-from debug import get_bogus_pred
-from expred.expred.utils import pad_mask_to_doclen
-from faxplain_utils import dump_quel, machine_rationale_mask_to_html
-from inputs import CounterfactualInput
-from preprocess import clean
-from search import google_rest_api_search as wiki_search
-from wiki import get_wiki_docs
-import logging
+from app.config import CounterfactualConfig
+from app.debug import get_bogus_pred
+from app.faxplain.faxplain_utils import machine_rationale_mask_to_html, dump_quel
+from app.faxplain.search import google_rest_api_search as wiki_search
+from app.faxplain.wiki import get_wiki_docs
+from app.preprocess import clean
+from app.sparcassist import (
+    HotflipCounterAssist,
+    MLMCounterAssist,
+    CounterfactualInput,
+    CounterfactWriter
+)
 
 extra = {'app_name': 'counterfactual'}
 logger = logging.getLogger(__name__)
-formatter = logging.Formatter('%(asctime)s %(app_name)s : %(message)s')
+formatter = logging.Formatter('%(asctime)s [counterfactual]: %(message)s')
 syslog = logging.StreamHandler()
 syslog.setFormatter(formatter)
 logger.setLevel(logging.INFO)
 logger.addHandler(syslog)
 logger = logging.LoggerAdapter(logger, extra)
+
+debug = False
 
 
 class CustomFlask(Flask):
@@ -40,8 +48,8 @@ app = CustomFlask(__name__)
 app.jinja_env.filters['zip'] = zip
 
 
-@app.route('/', methods=['GET', 'POST'])
-def main_page():
+@app.route('/faxplain', methods=['GET', 'POST'])
+def faxplain():
     if request.method == 'POST':
         query = request.form['query']
         query = clean(query)
@@ -204,15 +212,7 @@ def show_example():
     return cf_results.todict()
 
 
-@app.route('/reg_eval', methods=['POST'])
-def register_evaluation():
-    writer = CounterfactWriter(request)
-    cf_results = CounterfactResults.from_dict(request.json)
-    writer.write_evaluation(cf_results, cf_config, request.json['eval'])
-    return {'placeholder': None}
-
-
-if False:
+if debug:
     print('debug, will not load models')
 else:
     print("Loading models")
@@ -226,7 +226,6 @@ else:
     expred = Expred(cf_config)
 
     dataset = BertDataset(cf_config.dataset_name)
-
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=8080)

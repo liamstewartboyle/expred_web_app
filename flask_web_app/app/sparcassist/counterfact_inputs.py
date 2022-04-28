@@ -3,7 +3,7 @@ from typing import Any, List, Union
 import torch
 from torch import Tensor
 
-from expred.expred.inputs import ExpredInput
+from expred import ExpredInput
 
 
 class CounterfactualInput(ExpredInput):

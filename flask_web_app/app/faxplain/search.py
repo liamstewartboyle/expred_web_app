@@ -33,7 +33,7 @@ def google_wiki_search(query, top=3):
 
 
 def google_rest_api_search(raw_query: str, top=10):
-    with open('credentials.yaml') as f:
+    with open('../credentials.yaml') as f:
         data = yaml.load(f, Loader=yaml.FullLoader)
         api_key = data['google_api_key']
         cx = data['google_api_cx']
@@ -53,7 +53,7 @@ def google_rest_api_search(raw_query: str, top=10):
 
 
 def bing_wiki_search(search_term):
-    with open('credentials.yaml') as f:
+    with open('../credentials.yaml') as f:
         data = yaml.load(f, Loader=yaml.FullLoader)
         subscriptionKey = data['bingSubscriptionKey']
         customConfigId = data['bingCustomConfigId']

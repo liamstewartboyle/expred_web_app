@@ -4,9 +4,9 @@ import torch
 from transformers import BasicTokenizer
 
 from config import CounterfactualConfig
-from counterfact_assist import MLMCounterAssist
+from sparcassist.counterfact_assist import MLMCounterAssist
 from expred.expred.expred import Expred
-from inputs import CounterfactualInput
+from sparcassist.counterfact_inputs import CounterfactualInput
 from expred.expred.tokenizer import BertTokenizerWithSpans
 
 

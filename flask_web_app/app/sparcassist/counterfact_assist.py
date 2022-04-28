@@ -1,13 +1,13 @@
 from typing import Dict, List, Tuple, Union, Any
 
 import torch
+from expred import Expred, ExpredInput, BertTokenizerWithSpans
 from torch import Tensor, nn
 from transformers import BasicTokenizer
 
-from config import CounterfactualConfig
-from counterfact_result import CounterfactResults
-from expred import Expred, ExpredInput, BertTokenizerWithSpans
-from inputs import CounterfactualInput
+from .counterfact_inputs import CounterfactualInput
+from .counterfact_result import CounterfactResults
+from ..config import CounterfactualConfig
 
 
 def scoring_position_grad(grad_wrt_embd: Tensor, bert_embeddings: Tensor,
