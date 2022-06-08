@@ -1,12 +1,5 @@
+import torch
 from expred import ExpredConfig
-
-application = 'counterfactual'
-
-
-class FaxplainConfig(ExpredConfig):
-    def __init__(self) -> None:
-        super().__init__(dataset_name='movies')
-        self.load_from_pretrained = True
 
 
 class CounterfactualConfig(ExpredConfig):
@@ -14,6 +7,7 @@ class CounterfactualConfig(ExpredConfig):
     max_sentence = 30
     max_count_word_replacement = 5
     number_top_positions = 10
+    max_input_len = 512
 
     bert_dir = 'bert-base-uncased'
 
@@ -24,8 +18,9 @@ class CounterfactualConfig(ExpredConfig):
         'gramma': False,
     }
 
-    def __init__(self) -> None:
-        super().__init__(dataset_name='movies')
+    def __init__(self, development=False) -> None:
+        device = torch.device('cpu') if development else torch.device('cuda')
+        super().__init__(dataset_name='movies', device=device)
         self.load_from_pretrained = True
 
     def update_config_from_ajax_request(self, request) -> None:

@@ -3,8 +3,8 @@ from unittest import TestCase
 import torch
 from transformers import BasicTokenizer
 
-from config import CounterfactualConfig
-from sparcassist.counterfact_assist import MLMCounterAssist
+from sparcassist.config import CounterfactualConfig
+from sparcassist.model import MLMCounterAssist
 from expred.expred.expred import Expred
 from expred.expred.inputs import ExpredInput
 from expred.expred.tokenizer import BertTokenizerWithSpans
@@ -75,7 +75,7 @@ class TestExpredInput(TestCase):
 
         expred_inputs_should = torch.tensor(
             [[101] + self.encoded_query_should + [102] + self.encoded_doc_should + [102]])
-        self.assertTrue(torch.equal(self.cf_input.expred_inputs, expred_inputs_should))
+        self.assertTrue(torch.equal(self.cf_input.bert_inputs, expred_inputs_should))
 
         attention_masks_should = torch.ones_like(expred_inputs_should).type(torch.long)
         self.assertTrue(torch.equal(self.cf_input.attention_masks, attention_masks_should))
@@ -95,8 +95,10 @@ class TestExpredInput(TestCase):
         self.assertSequenceEqual(self.subtoken_doc_rationale_mask_should, subtoken_doc_rationale_mask)
 
     def test_update_and_apply_subtoken_input_rationale_masks(self):
-        self.cf_input.apply_subtoken_input_rationale_masks(
-            self.subtoken_input_rationale_masks_should.unsqueeze(0))
+        subtoken_input_rationale_masks_should = self.subtoken_input_rationale_masks_should.unsqueeze(0)
+        self.cf_input.apply_rationale_masks(subtoken_input_rationale_masks_should,
+                                            are_input_masks=True,
+                                            are_subtoken_masks=True)
         self.assertTrue(torch.equal(self.cf_input.subtoken_input_rationale_masks,
                                     self.subtoken_input_rationale_masks_should.unsqueeze(0)))
         masked_inputs_should = torch.tensor(
@@ -108,15 +110,17 @@ class TestExpredInput(TestCase):
 
         self.assertTrue(torch.equal(self.cf_input.masked_inputs, masked_inputs_should))
 
-        self.cf_input.apply_subtoken_input_rationale_masks(
-            [self.subtoken_input_rationale_masks_should.tolist()])
+        subtoken_input_rationale_masks = [self.subtoken_input_rationale_masks_should.tolist()]
+        self.cf_input.apply_rationale_masks(subtoken_input_rationale_masks,
+                                            are_subtoken_masks=True,
+                                            are_input_masks=True)
         self.assertTrue(
             torch.equal(self.cf_input.subtoken_input_rationale_masks,
                         self.subtoken_input_rationale_masks_should.unsqueeze(0)))
         self.assertTrue(torch.equal(self.cf_input.masked_inputs, masked_inputs_should))
 
     def test_update_and_apply_token_doc_rationale_masks(self):
-        self.cf_input.apply_token_doc_rationale_masks([self.token_doc_rationale_mask])
+        self.cf_input.apply_rationale_masks([self.token_doc_rationale_mask], False, False)
         self.assertSequenceEqual([self.subtoken_doc_rationale_mask_should], self.cf_input.subtoken_doc_rationale_masks)
         self.assertTrue(torch.equal(self.subtoken_input_rationale_masks_should.unsqueeze(0),
                                     self.cf_input.subtoken_input_rationale_masks))

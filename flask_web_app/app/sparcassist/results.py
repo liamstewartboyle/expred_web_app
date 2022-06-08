@@ -15,7 +15,7 @@ class CounterfactResults:
         self.subtoken_mask = subtoken_mask
         self.ann_id = ann_id
 
-    def todict(self):
+    def to_dict(self):
         return {
             'cf_examples': {
                 'instances': self.instances,
@@ -26,6 +26,9 @@ class CounterfactResults:
             'session_id': self.session_id,
 
         }
+
+    def __repr__(self):
+        return self.to_dict().__repr__()
 
     @classmethod
     def from_dict(cls, input_dict: Dict):

@@ -1,5 +1,5 @@
 # Byte-compiled / optimized / DLL files
-flask_web_app/faxplain/counterfactual_res/*
+*/counterfactual_res/*
 flask_web_app/faxplain/data
 .idea
 *.zip

@@ -4,24 +4,31 @@ import pickle
 from random import random
 from typing import Dict, List, Union, Any
 
-from werkzeug.local import LocalProxy
+from flask import Request
 
-from .counterfact_result import CounterfactResults
-from ..config import CounterfactualConfig
+from .config import CounterfactualConfig
+from .results import CounterfactResults
 
 
 class FaxplainWriter:
-    def __init__(self, session_id: str = None) -> None:
+    base_dir = '../'
+
+    def __init__(self, session_id: str = None, res_folder=None, create_res_file=True) -> None:
         if not session_id:
             self.session_id = hex(int(random() * 1e13))[2:]
-        self.base_dir = '../'
+        else:
+            self.session_id = session_id
 
-        self.res_folder = self.base_dir + 'res/'
+        self.res_folder = self.base_dir + 'res' if res_folder is None else res_folder
         FaxplainWriter.maybe_create_res_folder(self.res_folder)
 
-        self.init_res_fnames()
-        FaxplainWriter.maybe_create_res_file(self.ugc_data_fname)
-        FaxplainWriter.maybe_create_res_file(self.mgc_data_fname)
+        self.ugc_data_fname = f'{self.res_folder}/ugc_{self.session_id}.csv'  # user generated content
+        self.mgc_data_fname = f'{self.res_folder}/mgc_{self.session_id}.csv'  # machine genarated content
+        self.temp_data_fname = self.res_folder + f'data/temp_{self.session_id}.pkl'
+
+        if create_res_file:
+            FaxplainWriter.maybe_create_res_file(self.ugc_data_fname)
+            FaxplainWriter.maybe_create_res_file(self.mgc_data_fname)
 
     @classmethod
     def maybe_create_res_file(cls, fname):
@@ -34,26 +41,19 @@ class FaxplainWriter:
     def maybe_create_res_folder(cls, dirname):
         os.makedirs(dirname, exist_ok=True)
 
-    def init_res_fnames(self):
-        self.ugc_data_fname = f'{self.res_folder}/ugc_{self.session_id}.csv'  # user generated content
-        self.mgc_data_fname = f'{self.res_folder}/mgc_{self.session_id}.csv'  # machine genarated content
-        self.temp_data_fname = self.res_folder + f'data/temp_{self.session_id}.pkl'
-
 
 class CounterfactWriter(FaxplainWriter):
-    def init_res_fnames(self):
-        self.res_fname = f'{self.res_folder}/res_{self.session_id}.pkl'  # both from user-intervened and from machine generated counterfactuals
-        self.eval_fname = f'{self.res_folder}/eval_{self.session_id}.pkl'
+    def __init__(self, request: Request) -> None:
+        if 'session_id' not in request.json:
+            request.json['session_id'] = None
+        res_folder = self.base_dir + 'counterfactual_res/'
+        super().__init__(session_id=request.json['session_id'],
+                         res_folder=res_folder,
+                         create_res_file=False)
 
-    def __init__(self, request: LocalProxy) -> None:
-        if 'session_id' not in request.json or not request.json['session_id']:
-            self.session_id = hex(int(random() * 1e13))[2:]
-        else:
-            self.session_id = request.json['session_id']
-        self.base_dir = '../'
-        self.res_folder = self.base_dir + 'counterfactual_res/'
-        self.init_res_fnames()
-        CounterfactWriter.maybe_create_res_folder(self.res_folder)
+        # both from user-intervened and from machine generated counterfactuals
+        self.res_fname = f'{self.res_folder}/res_{self.session_id}.pkl'
+        self.eval_fname = f'{self.res_folder}/eval_{self.session_id}.pkl'
 
     @staticmethod
     def get_counterfactual_history(cf_history: List[Dict[str, Union[Union[List[str], int], Any]]]):

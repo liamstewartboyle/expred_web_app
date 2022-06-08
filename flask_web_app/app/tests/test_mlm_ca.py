@@ -3,10 +3,10 @@ from unittest import TestCase
 import torch
 from transformers import BasicTokenizer
 
-from config import CounterfactualConfig
-from sparcassist.counterfact_assist import MLMCounterAssist
+from sparcassist.config import CounterfactualConfig
+from sparcassist.model import MLMCounterAssist
 from expred.expred.expred import Expred
-from sparcassist.counterfact_inputs import CounterfactualInput
+from sparcassist.inputs import CounterfactualInput
 from expred.expred.tokenizer import BertTokenizerWithSpans
 
 
@@ -47,18 +47,18 @@ class TestMLMCounterfactualAssist(TestCase):
         token_doc_position_masks = [torch.tensor([1, 1, 0], dtype=torch.long)]
         mlm_cf_assist = MLMCounterAssist(self.cf_config, self.expred)
 
-        self.original_input.apply_token_doc_rationale_masks(token_doc_rationale_masks)
-        self.original_input.apply_token_doc_position_masks(token_doc_position_masks)
+        self.original_input.apply_rationale_masks(token_doc_rationale_masks, False, False)
+        self.original_input.apply_position_masks(token_doc_position_masks, False, False)
         res = mlm_cf_assist.convert_unmasker_res_to_counterfactual_input(mock_unmasker_results,
                                                                          self.original_input,
                                                                          self.span_tokenizer)
-        first_encoded_input = res.expred_inputs[0]
+        first_encoded_input = res.bert_inputs[0]
         first_encoded_input_should = torch.tensor(self.span_tokenizer.encode('what is the sentiment of this review ?',
                                                                              'joyful contest .'),
                                                   dtype=torch.long)
         self.assertTrue(torch.equal(first_encoded_input, first_encoded_input_should))
 
-        second_encoded_input = res.expred_inputs[1]
+        second_encoded_input = res.bert_inputs[1]
         second_encoded_input_should = torch.tensor(self.span_tokenizer.encode('what is the sentiment of this review ?',
                                                                               'good test .') + [0],
                                                    dtype=torch.long)
@@ -77,8 +77,8 @@ class TestMLMCounterfactualAssist(TestCase):
                                        config=self.cf_config,
                                        ann_ids=None,
                                        span_tokenizer=self.span_tokenizer)
-        cf_input.apply_token_doc_rationale_masks([token_doc_rationale_mask])
-        cf_input.apply_token_doc_position_masks([token_doc_position_mask])
+        cf_input.apply_rationale_masks([token_doc_rationale_mask], False, False)
+        cf_input.apply_position_masks([token_doc_position_mask], False, False)
 
         mlm_cf_assist = MLMCounterAssist(self.cf_config, self.expred)
         counterfactual = mlm_cf_assist.get_mlm_counterfactual(alternaive_cls_preds,
@@ -103,9 +103,9 @@ class TestMLMCounterfactualAssist(TestCase):
         token_doc_rationale_mask = [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1]
         token_doc_position_mask = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0]
 
-        cf_input.apply_token_doc_rationale_masks([token_doc_rationale_mask])
-        cf_input.apply_token_doc_position_masks([token_doc_position_mask])
+        cf_input.apply_rationale_masks([token_doc_rationale_mask], False, False)
+        cf_input.apply_position_masks([token_doc_position_mask], False, False)
         mlm_cf_assist = MLMCounterAssist(self.cf_config, self.expred)
 
-        ret = mlm_cf_assist._do_counterfactual_generation(cf_input, self.span_tokenizer)
+        ret = mlm_cf_assist._do_cf_gen(cf_input, self.span_tokenizer)
         # pprint(ret)

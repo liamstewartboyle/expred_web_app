@@ -11,5 +11,5 @@ scipy>=1.1.0
 gensim==4.1.2
 scikit-learn==1.0.2
 numpy==1.20.3
-beautifulsoup4>=4.11.1
+beautifulsoup4>=4.9.3
 googlesearch-python>=1.1.0

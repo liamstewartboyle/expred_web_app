@@ -1,4 +1,4 @@
-from .counterfact_assist import HotflipCounterAssist, MLMCounterAssist
-from .counterfact_result import CounterfactResults
-from .counterfact_writer import CounterfactWriter
-from .counterfact_inputs import CounterfactualInput
+from .model import HotflipCounterAssist, MLMCounterAssist
+from .results import CounterfactResults
+from .writer import CounterfactWriter
+from .inputs import CounterfactualInput

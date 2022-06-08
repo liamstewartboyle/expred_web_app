@@ -1,9 +1,8 @@
 from typing import Any, List, Union
 
 import torch
-from torch import Tensor
-
 from expred import ExpredInput
+from torch import Tensor
 
 
 class CounterfactualInput(ExpredInput):
@@ -26,10 +25,17 @@ class CounterfactualInput(ExpredInput):
         temp = self.pad_to_input_subtoken_masks(self.subtoken_doc_position_masks)
         self.subtoken_input_position_masks = self.select_no_overheads(temp)
 
-    def apply_subtoken_input_position_masks(self, subtoken_input_position_masks: List[Tensor]):
-        self.subtoken_input_position_masks = subtoken_input_position_masks
-        self.subtoken_doc_position_masks = self.trim_to_doc_rationale_masks(subtoken_input_position_masks)
-        self.token_doc_position_masks = self.pool_subtoken_masks(self.subtoken_doc_position_masks, self.docs_spans)
+    def apply_position_masks(self,
+                             masks: Union[List[Tensor], List[List[int]]],
+                             are_subtoken_masks: bool,
+                             are_input_masks: bool):
+        token_doc_masks, subtoken_doc_masks, subtoken_input_masks = self.compute_other_masks(masks,
+                                                                                             are_subtoken_masks,
+                                                                                             are_input_masks)
+        self.subtoken_input_position_masks = self.select_no_overheads(subtoken_input_masks)
+        self.subtoken_doc_position_masks = subtoken_doc_masks
+        self.token_doc_position_masks = token_doc_masks
+        return self
 
     @staticmethod
     def _extract_token_doc_custom_mask(request) -> Union[List[int], Any]:
@@ -44,13 +50,16 @@ class CounterfactualInput(ExpredInput):
                  labels,
                  config,
                  ann_ids,
-                 span_tokenizer):
+                 span_tokenizer,
+                 token_doc_custom_pos_mask=None):
         super().__init__(queries,
                          docs,
                          labels,
                          config,
                          ann_ids,
                          span_tokenizer)
+        if token_doc_custom_pos_mask is not None:
+            self.token_doc_position_masks = [token_doc_custom_pos_mask]
 
     @classmethod
     def from_ajax_request_factory(cls, request, basic_tokenizer, cf_config, span_tokenizer):
@@ -58,16 +67,12 @@ class CounterfactualInput(ExpredInput):
         orig_doc = [request.json['doc']]
         orig_label = request.json['label']
         ann_id = request.json['ann_id']
+        token_doc_custom_pos_mask = cls._extract_token_doc_custom_mask(request)
         cf_input = cls([orig_query],
                        [orig_doc],
                        [orig_label],
                        cf_config,
-                       ann_id,
-                       span_tokenizer)
-
-        token_doc_custom_mask = cf_input._extract_token_doc_custom_mask(request)
-        if token_doc_custom_mask is not None:
-            cf_input.apply_token_doc_rationale_masks([token_doc_custom_mask])
-            subtoken_input_position_masks = cf_input.select_no_overheads(cf_input.subtoken_input_rationale_masks)
-            cf_input.apply_subtoken_input_position_masks(subtoken_input_position_masks)
+                       [ann_id],
+                       span_tokenizer,
+                       token_doc_custom_pos_mask)
         return cf_input
