@@ -10,7 +10,6 @@ const app = Vue.createApp({
             cf_examples: [],
             is_cf_example_loading: false,
             is_cf_example_ready: false,
-            is_annotation_done: false
         }
     },
     mounted() {
@@ -20,12 +19,12 @@ const app = Vue.createApp({
             use_custom_mask = false
             custom_mask = undefined
             masking_method = 'expred'
-            selection_strategy = 'hotflip'
             if (evt.hasOwnProperty('mask') && !(typeof evt['mask'] === "undefined")) {
                 use_custom_mask = true
                 custom_mask = evt['mask']
                 masking_method = 'custom'
             }
+            selection_strategy = 'hotflip'
             if (evt.hasOwnProperty('selection_strategy')) {
                 selection_strategy = evt['selection_strategy']
             }
@@ -55,6 +54,8 @@ const app = Vue.createApp({
                 })
         });
         this.eventBus.on('evaluation_done', (data) => {
+            this.is_cf_example_loading = true
+            this.is_cf_example_ready = false
             let url = "/reg_eval"
             data.session_id = this.session_id
             data.cf_examples = this.cf_examples
@@ -62,7 +63,34 @@ const app = Vue.createApp({
                 .then(response => {
                     this.is_cf_example_loading = false
                     this.is_cf_example_ready = false
-                    this.is_annotation_done = true
+                })
+                .catch(error => {
+                    console.log(error)
+                })
+        });
+        this.eventBus.on('alt_word_selected', (evt) => {
+            this.is_cf_example_loading = true
+            this.is_cf_example_ready = false
+            let url = "/select_alt_word";
+            let selection_strategy = 'hotflip'
+            if (evt.hasOwnProperty('selection_strategy')) {
+                selection_strategy = evt['selection_strategy']
+            }
+            data = {
+                query: this.query,
+                session_id: this.session_id,
+                cf_examples: this.cf_examples,
+                alt_word_id: evt['alt_word_id'],
+                masking_method: 'custom',
+                use_custom_mask: true,
+                selection_strategy: selection_strategy
+            }
+            axios.post(url, data)
+                .then(response => {
+                    this.cf_examples = response['data']['cf_examples']
+                    this.session_id = response['data']['session_id']
+                    this.is_cf_example_ready = true
+                    this.is_cf_example_loading = false
                 })
                 .catch(error => {
                     console.log(error)

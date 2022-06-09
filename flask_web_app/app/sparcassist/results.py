@@ -31,6 +31,23 @@ class CounterfactResults:
         return self.to_dict().__repr__()
 
     @classmethod
+    def combine_cf_results(cls, cf_res_0: Dict, divide_pos: int, cf_res_1):
+        combined_res = {
+            'instances': cf_res_0['instances'][:divide_pos],
+            'mask': cf_res_0['mask'],
+            'subtoken_mask': cf_res_0['mask'],
+            'ann_id': cf_res_0['ann_id']
+        }
+        cf_res_1 = cf_res_1.to_dict()
+        combined_res['instances'] += cf_res_1['cf_examples']['instances']
+        combined_res['instances'][divide_pos]['replaced'] = cf_res_0['instances'][divide_pos]['replaced']
+        ret = {
+            'cf_examples': combined_res,
+            'session_id': cf_res_1['session_id']
+        }
+        return cls.from_dict(ret)
+
+    @classmethod
     def from_dict(cls, input_dict: Dict):
         instances = input_dict['cf_examples']['instances']
         mask = input_dict['cf_examples']['mask']

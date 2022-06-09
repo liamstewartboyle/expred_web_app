@@ -77,6 +77,13 @@ const show_examples = app.component('show-examples', {
                 }
             }
             this.eventBus.emit('evaluation_done', data)
+        },
+        select_word(event) {
+            data = {
+                alt_word_id: event.currentTarget.id,
+                selection_strategy: this.selection_strategy
+            }
+            this.eventBus.emit('alt_word_selected', data)
         }
     },
     template:
@@ -104,9 +111,32 @@ const show_examples = app.component('show-examples', {
                 <span class=''>- {{ i }} word<span v-if='(i > 1)'>s</span> swapped: </span>
                 <span class="rec-counter" id="selected-sentence">
                     <span v-for='(word, j) in cf_example["input"]'>
-                        <span 
-                        v-bind:class='[{ "fw-bold": mask[j] === 1 }, { "badge rounded-pill bg-warning text-dark": cf_example["replaced"] === j }]'>
-                        {{ word }}
+                        <span :class="{ 'fw-bold': (mask[j] === 1) }">
+                            <span v-if="cf_example['replaced'] === j" class="badge rounded-pill bg-warning text-dark">
+                                <span v-if="cf_example['alternative_words'] === undefined">
+                                    {{ word }}
+                                </span>
+                                <span v-else>
+                                    <span class="dropdown">
+                                        <a class=" dropdown-toggle" data-bs-toggle="dropdown" 
+                                           href="#" role="button" aria-expanded="false">
+                                           {{ word }}
+                                        </a>
+                                        <ul class="dropdown-menu">
+                                            <li v-for='(alt_word, k) in cf_example["alternative_words"]'>
+                                                <a class="dropdown-item" 
+                                                    v-bind:id="i+ '.' + j + '.' + k" 
+                                                    @click="select_word($event)">
+                                                    {{ alt_word }}
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </span>
+                                </span>
+                            </span>
+                            <span v-else>
+                                {{ word }}
+                            </span>
                         </span>{{' '}}
                     </span>
                     <span>

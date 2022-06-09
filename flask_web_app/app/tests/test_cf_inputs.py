@@ -1,13 +1,13 @@
+from argparse import Namespace
 from unittest import TestCase
 
 import torch
 from transformers import BasicTokenizer
 
+from sparcassist import CounterfactualInput
 from sparcassist.config import CounterfactualConfig
 from sparcassist.model import MLMCounterAssist
-from expred.expred.expred import Expred
-from expred.expred.inputs import ExpredInput
-from expred.expred.tokenizer import BertTokenizerWithSpans
+from expred import Expred, ExpredInput, BertTokenizerWithSpans
 
 
 class TestExpredInput(TestCase):
@@ -126,3 +126,40 @@ class TestExpredInput(TestCase):
                                     self.cf_input.subtoken_input_rationale_masks))
         self.assertTrue(torch.equal(self.cf_input.subtoken_input_rationale_masks,
                                     self.subtoken_input_rationale_masks_should.unsqueeze(0)))
+
+    def test_from_cf_example(self):
+        old_cf_examples = {
+            'instances': [
+                {
+                    'input': ['one', 'two', 'three'],
+                    'pred': ['POS'],
+                    'replaced': -1,
+                    'label': ['NEG'],
+                }, {
+                    'input': ['one', 'two', 'four'],
+                    'pred': ['POS'],
+                    'replaced': 2,
+                    'label': ['NEG'],
+                    'alternative_words': ['five', 'seven', 'eight']
+                }, {
+                    'input': ['one', 'b', 'four'],
+                    'pred': ['POS'],
+                    'replaced': 1,
+                    'label': ['NEG'],
+                    'alternative_words': ['a', 'c', 'd']
+                }],
+            'mask': [1, 1, 1],
+            'subtoken_mask': [1, 1, 1],
+            'ann_id': 'bogus'
+        }
+        query = 'i am query'
+        alt_word_ids = [1, 2, 2]
+        basic_tokenizer = BasicTokenizer()
+        span_tokenizer = BertTokenizerWithSpans.from_pretrained('bert-base-uncased')
+        cf_config = Namespace(wildcard_token='.', class_names=['NEG', 'POS'])
+        ret = CounterfactualInput.from_cf_example(old_cf_examples, query, alt_word_ids, basic_tokenizer, cf_config,
+                                                  span_tokenizer)
+        self.assertSequenceEqual(ret.token_doc_position_masks, [[1, 1, 1]])
+        self.assertEqual(ret.wildcard_token, '.')
+        self.assertSequenceEqual(ret.orig_queries, ['i am query'.split()])
+        self.assertSequenceEqual(ret.orig_docs, [['one', 'two', 'eight']])

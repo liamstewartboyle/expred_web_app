@@ -62,7 +62,7 @@ class CounterfactualInput(ExpredInput):
             self.token_doc_position_masks = [token_doc_custom_pos_mask]
 
     @classmethod
-    def from_ajax_request_factory(cls, request, basic_tokenizer, cf_config, span_tokenizer):
+    def from_sentence_selection(cls, request, basic_tokenizer, cf_config, span_tokenizer):
         orig_query = basic_tokenizer.tokenize(request.json['query'])
         orig_doc = [request.json['doc']]
         orig_label = request.json['label']
@@ -70,6 +70,29 @@ class CounterfactualInput(ExpredInput):
         token_doc_custom_pos_mask = cls._extract_token_doc_custom_mask(request)
         cf_input = cls([orig_query],
                        [orig_doc],
+                       [orig_label],
+                       cf_config,
+                       [ann_id],
+                       span_tokenizer,
+                       token_doc_custom_pos_mask)
+        return cf_input
+
+    @classmethod
+    def from_cf_example(cls, old_cf_examples, query, alt_word_ids, basic_tokenizer, cf_config, span_tokenizer):
+        orig_query = basic_tokenizer.tokenize(query)
+
+        doc = old_cf_examples['instances'][alt_word_ids[0]]['input']
+        alt_word = old_cf_examples['instances'][alt_word_ids[0]]['alternative_words'][alt_word_ids[2]]
+        doc[alt_word_ids[1]] = alt_word
+
+        orig_label = old_cf_examples['instances'][alt_word_ids[0]]['label']
+
+        ann_id = old_cf_examples['ann_id']
+
+        token_doc_custom_pos_mask = old_cf_examples['mask']
+
+        cf_input = cls([orig_query],
+                       [[doc]],
                        [orig_label],
                        cf_config,
                        [ann_id],

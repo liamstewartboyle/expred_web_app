@@ -13,8 +13,8 @@ from .results import CounterfactResults
 
 class ExpredCounterAssist:
     def __init__(self, cf_config: CounterfactualConfig, model: Expred):
-        self.max_number_top_positions = cf_config.number_top_positions
-        self.number_top_positions = self.max_number_top_positions
+        self.number_top_positions_from_config = cf_config.number_top_positions
+        self.number_top_positions = self.number_top_positions_from_config
         self.max_count_word_replacement = cf_config.max_count_word_replacement
         self.cf_config = cf_config
         self.device = cf_config.device
@@ -104,7 +104,8 @@ class ExpredCounterAssist:
 
     def _do_cf_gen(self,
                    cf_input: CounterfactualInput,
-                   span_tokenizer: BertTokenizerWithSpans):
+                   span_tokenizer: BertTokenizerWithSpans,
+                   first_prediction:str):
         raise NotImplementedError
 
     @staticmethod
@@ -114,14 +115,22 @@ class ExpredCounterAssist:
     def generate_counterfactuals(self,
                                  session_id: str,
                                  cf_input: CounterfactualInput,
-                                 span_tokenizer: BertTokenizerWithSpans) -> CounterfactResults:
+                                 span_tokenizer: BertTokenizerWithSpans,
+                                 first_prediction=None) -> CounterfactResults:
+
+        number_doc_rationale_subtokens = min(int(torch.sum(m)) for m in cf_input.subtoken_doc_position_masks)
+        if number_doc_rationale_subtokens < self.number_top_positions_from_config:
+            print(f'set #variable subtokens to #rationale subtokens ({number_doc_rationale_subtokens})')
+            self.number_top_positions = number_doc_rationale_subtokens
+        else:
+            self.number_top_positions = self.number_top_positions_from_config
 
         if self.number_top_positions == 0:
             return self.get_result_insufficient_rationale(session_id,
                                                           cf_input,
                                                           span_tokenizer)
         else:
-            cf_history = self._do_cf_gen(cf_input, span_tokenizer)
+            cf_history = self._do_cf_gen(cf_input, span_tokenizer, first_prediction)
 
         mask = cf_input.token_doc_rationale_masks[0]
         if isinstance(mask, Tensor):
@@ -134,7 +143,9 @@ class ExpredCounterAssist:
 
 
 class HotflipCounterAssist(ExpredCounterAssist):
-    number_top_candidate_words = 5
+    def __init__(self, cf_config: CounterfactualConfig, model: Expred):
+        super().__init__(cf_config, model)
+        self.number_top_candidate_words = cf_config.number_top_candidate_words
 
     @staticmethod
     def scoring_words(grad_wrt_embd: Tensor, word_embedding: Tensor) -> Tensor:
@@ -144,9 +155,9 @@ class HotflipCounterAssist(ExpredCounterAssist):
 
     @staticmethod
     def scoring_positions(grad_wrt_embd: Tensor, bert_embeddings: Tensor,
-                          subtoken_input_rationale_masks: Tensor) -> Tensor:
+                          subtoken_input_position_mask: Tensor) -> Tensor:
         position_scores = torch.mean(grad_wrt_embd * bert_embeddings, dim=-1) + (
-                1 - subtoken_input_rationale_masks) * 1e16  # B*L
+                1 - subtoken_input_position_mask) * 1e16  # B*L
         return position_scores
 
     def _select_candidate_positions(self, position_scores):
@@ -205,8 +216,7 @@ class HotflipCounterAssist(ExpredCounterAssist):
                      cf_input: CounterfactualInput):
         position_scores = self.scoring_positions(grad_wrt_bert_embedding,
                                                  current_bert_embeddings,
-                                                 cf_input.subtoken_input_position_masks[0])
-        position_scores = position_scores  # B*L
+                                                 cf_input.subtoken_input_position_masks[0])  # B*L
         word_scores = self.scoring_words(grad_wrt_bert_embedding, self.word_embedding)  # B, L, V
 
         candidate_positions = self._select_candidate_positions(position_scores)
@@ -232,15 +242,19 @@ class HotflipCounterAssist(ExpredCounterAssist):
 
     def _do_cf_gen(self,
                    cf_input: CounterfactualInput,
-                   span_tokenizer: BertTokenizerWithSpans):
+                   span_tokenizer: BertTokenizerWithSpans,
+                   first_prediction):
         (orig_cls_preds,
          tiled_orig_preds,
          current_cls_preds,
          current_bert_embeddings) = self.cls_pred(cf_input)
 
-        cf_input.tile_attention_masks(self.number_top_positions)
-
         cf_history = [self.convert_cf_output_to_dict(current_cls_preds, cf_input, span_tokenizer, -1)]
+        if first_prediction is not None and \
+                int(orig_cls_preds[0]) != cf_input.class_names.index(first_prediction):
+            return cf_history
+
+        cf_input.tile_attention_masks(self.number_top_positions)
         for count_words_replaced in range(self.max_count_word_replacement):
             loss = self.loss_criterion(current_cls_preds, orig_cls_preds).mean()
             grad_wrt_bert_embedding = torch.autograd.grad(loss, current_bert_embeddings)[0].data
@@ -375,10 +389,15 @@ class MLMCounterAssist(ExpredCounterAssist):
 
     def _do_cf_gen(self,
                    cf_input: CounterfactualInput,
-                   span_tokenizer: BertTokenizerWithSpans):
+                   span_tokenizer: BertTokenizerWithSpans,
+                   first_prediction: str):
         orig_cls_preds, tiled_orig_preds, current_cls_preds, _ = self.cls_pred(cf_input)
 
         cf_history = [self.convert_cf_output_to_dict(current_cls_preds, cf_input, span_tokenizer, -1)]
+
+        if first_prediction is not None and \
+                int(orig_cls_preds[0]) != cf_input.class_names.index(first_prediction):
+            return cf_history
 
         alternative_cls_preds = self.get_alternative_preds(orig_cls_preds)
 

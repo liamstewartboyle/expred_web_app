@@ -68,8 +68,11 @@ class CounterfactWriter(FaxplainWriter):
         return history
 
     def _get_output_data(self,
-                         cf_results: CounterfactResults,
+                         cf_results: Union[CounterfactResults, Dict],
                          cf_conf: CounterfactualConfig):
+        # if isinstance(cf_results, dict):
+        #     ann_id = cf_results['ann_id']
+        #     session_id = cf_conf.
         ann_id = cf_results.ann_id
         session_id = cf_results.session_id
 
@@ -93,7 +96,7 @@ class CounterfactWriter(FaxplainWriter):
                 'history': history}
 
     def write_cf_example(self,
-                         cf_results: CounterfactResults,
+                         cf_results: Union[CounterfactResults, Dict],
                          cf_conf: CounterfactualConfig):
         output = self._get_output_data(cf_results, cf_conf)
         with open(self.res_fname, 'ab+') as fout:

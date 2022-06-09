@@ -7,6 +7,7 @@ class CounterfactualConfig(ExpredConfig):
     max_sentence = 30
     max_count_word_replacement = 5
     number_top_positions = 10
+    number_top_candidate_words = 5
     max_input_len = 512
 
     bert_dir = 'bert-base-uncased'
