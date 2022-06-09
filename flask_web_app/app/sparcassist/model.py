@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Dict, List, Tuple, Union, Any
 
 import torch
@@ -12,7 +13,6 @@ from .results import CounterfactResults
 
 class ExpredCounterAssist:
     def __init__(self, cf_config: CounterfactualConfig, model: Expred):
-        # self.cf_config = cf_config
         self.max_number_top_positions = cf_config.number_top_positions
         self.number_top_positions = self.max_number_top_positions
         self.max_count_word_replacement = cf_config.max_count_word_replacement
@@ -64,7 +64,7 @@ class ExpredCounterAssist:
                                   cf_input: ExpredInput,
                                   tokenizer: BertTokenizerWithSpans,
                                   pos: int, is_subtoken_pos=True,
-                                  rest_candidate_words: Tensor = None):
+                                  alternative_words: Union[Tensor, List[str]] = None):
         pred = cf_input.cls_preds_to_class_name(cls_preds)
         subtoken_cf_docs = cf_input.extract_subtoken_docs(cf_input.bert_inputs)
         token_cf_doc = tokenizer.decode_doc_with_span(subtoken_cf_docs[0], cf_input.docs_spans[0])
@@ -75,8 +75,11 @@ class ExpredCounterAssist:
             'replaced': pos,
             'label': cf_input.orig_labels[0]
         }
-        if rest_candidate_words is not None:
-            ret['rest_candidate_words'] = tokenizer.convert_ids_to_tokens(rest_candidate_words.squeeze().tolist())
+        if alternative_words is not None:
+            if isinstance(alternative_words, list):
+                ret['alternative_words'] = alternative_words
+            else:
+                ret['alternative_words'] = tokenizer.convert_ids_to_tokens(alternative_words.squeeze().tolist())
         return ret
 
     def cls_pred(self, cf_input: ExpredInput) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
@@ -161,21 +164,6 @@ class HotflipCounterAssist(ExpredCounterAssist):
     def _select_top_candidate_words(word_scores: Tensor, candidate_positions: Tensor) -> Tensor:
         ret_new = HotflipCounterAssist._select_candidate_words(word_scores, candidate_positions, 1)[:, :, 0]
         return ret_new
-
-    # @staticmethod
-    # def _build_candidate_masked_inputs_new(masked_inputs: Tensor,
-    #                                        candidate_positions: Tensor,
-    #                                        candidate_words: Tensor,
-    #                                        top_p: int,
-    #                                        top_k: int):
-    #     tiled_masked_inputs = torch.tile(torch.unsqueeze(masked_inputs, dim=1), [1, top_p, top_k])  # B*top_pos*L,
-    #
-    #     candidate_masked_inputs = torch.scatter(tiled_masked_inputs, dim=-1,
-    #                                             index=candidate_positions.unsqueeze(-1),
-    #                                             src=candidate_words.unsqueeze(-1))  # B*top_pos*L
-    #
-    #     candidate_masked_inputs = candidate_masked_inputs.reshape((top_p, -1))  # top_pos * (B x L)
-    #     return candidate_masked_inputs
 
     @staticmethod
     def _build_candidate_masked_inputs(masked_inputs: Tensor,
@@ -272,7 +260,7 @@ class HotflipCounterAssist(ExpredCounterAssist):
                                                                         cf_input.attention_masks)
             counterfactual = self.convert_cf_output_to_dict(current_cls_preds, cf_input, span_tokenizer,
                                                             int(position_to_replace.squeeze().data),
-                                                            rest_candidate_words=rest_candidate_words)
+                                                            alternative_words=rest_candidate_words)
             cf_history.append(counterfactual)
             if self._pred_is_flipped(cf_history):
                 break
@@ -359,6 +347,7 @@ class MLMCounterAssist(ExpredCounterAssist):
 
         mask_token = self.unmasker.tokenizer.mask_token
         unmasker_results = []
+        alternative_words = defaultdict(list)
         assert len(input_doc) == len(cf_input.token_doc_position_masks[0])
         assert len(input_doc) == len(cf_input.token_doc_rationale_masks[0])
         for pos, (token_str, m) in enumerate(zip(input_doc, cf_input.token_doc_position_masks[0])):
@@ -367,17 +356,22 @@ class MLMCounterAssist(ExpredCounterAssist):
             doc_first_half = ' '.join(input_doc[:pos])
             doc_second_half = ' '.join(input_doc[pos + 1:])
             prompt_input = f'"{doc_first_half} {mask_token} {doc_second_half}" {query_prompt}'
-            for res in self.unmasker(prompt_input):
-                if res['token_str'].strip() != token_str:
-                    unmasker_results.append(res)
-                    unmasker_results[-1]['pos'] = pos
-                    break
+            candidate_rets = self.unmasker(prompt_input)
+            unmasker_results.append(None)
+            for ret in candidate_rets:
+                if ret['token_str'].strip() != token_str:
+                    if unmasker_results[-1] is None:
+                        unmasker_results[-1] = ret
+                        unmasker_results[-1]['pos'] = pos
+                    else:
+                        alternative_words[pos].append(ret['token_str'].strip())
 
         unmasker_results = self.remove_prompt_overhead(unmasker_results)
         counterfactual = self.select_best_counterfactual(unmasker_results, cf_input, span_tokenizer,
                                                          alternative_cls_preds)
+        alternative_words = list(set(alternative_words[counterfactual['pos']]))
 
-        return counterfactual
+        return counterfactual, alternative_words
 
     def _do_cf_gen(self,
                    cf_input: CounterfactualInput,
@@ -391,16 +385,17 @@ class MLMCounterAssist(ExpredCounterAssist):
         for count_words_replaced in range(self.max_count_word_replacement):
             input_doc = cf_input.orig_docs[0]
 
-            counterfactual = self.get_mlm_counterfactual(alternative_cls_preds,
-                                                         input_doc,
-                                                         cf_input,
-                                                         span_tokenizer)
+            counterfactual, alternative_words = self.get_mlm_counterfactual(alternative_cls_preds,
+                                                                            input_doc,
+                                                                            cf_input,
+                                                                            span_tokenizer)
 
             cf_input = self.convert_unmasker_res_to_counterfactual_input([counterfactual],
                                                                          cf_input,
                                                                          span_tokenizer)
             unmasker_res = self.convert_cf_output_to_dict(counterfactual['cls_pred'], cf_input, span_tokenizer,
-                                                          counterfactual['pos'], is_subtoken_pos=False)
+                                                          counterfactual['pos'], is_subtoken_pos=False,
+                                                          alternative_words=alternative_words)
             cf_history.append(unmasker_res)
 
             if self._pred_is_flipped(cf_history):
