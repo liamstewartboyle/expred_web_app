@@ -113,6 +113,13 @@ def select_alt_word():
     writer.write_cf_example(cf_results, cf_config)
     return cf_results.to_dict()
 
+@sparcassist_pages.route('/reg_eval', methods=['POST'])
+def register_evaluation():
+    writer = CounterfactWriter(request)
+    cf_results = CounterfactResults.from_dict(request.json)
+    writer.write_evaluation(cf_results, cf_config, request.json['eval'])
+    return {'placeholder': None}
+
 
 print("Loading models")
 cf_config = CounterfactualConfig(development)
