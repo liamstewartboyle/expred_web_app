@@ -21,10 +21,14 @@ class CounterfactualConfig(ExpredConfig):
 
     def __init__(self, development=False) -> None:
         if development or not torch.cuda.is_available():
-            device = torch.device('cpu')
+            device = 'cpu'
         else:
-            torch.device('cuda')
+            device = torch.device('cuda')
         super().__init__(dataset_name='movies', device=device)
+        if torch.cuda.is_available():
+            assert self.device == 'cuda' or self.device == torch.device('cuda')
+        else:
+            assert self.device == 'cpu'
         self.load_from_pretrained = True
 
     def update_config_from_ajax_request(self, request) -> None:
