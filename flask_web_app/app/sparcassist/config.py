@@ -20,7 +20,10 @@ class CounterfactualConfig(ExpredConfig):
     }
 
     def __init__(self, development=False) -> None:
-        device = torch.device('cpu') if development else torch.device('cuda')
+        if development or not torch.cuda.is_available():
+            device = torch.device('cpu')
+        else:
+            torch.device('cuda')
         super().__init__(dataset_name='movies', device=device)
         self.load_from_pretrained = True
 
