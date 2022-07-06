@@ -1,5 +1,7 @@
 *.pt
 tryouts/*
-faxplain/trained_models/*
+app/trained_models/*
+app/counterfactual_res/*
+app/tests/*
 *__pycache__*
 

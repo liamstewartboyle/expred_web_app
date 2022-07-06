@@ -1,2 +1,2 @@
 runtime: python37
-entrypoint: python faxplain.py
+entrypoint: python main.py
