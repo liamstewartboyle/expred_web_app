@@ -37,7 +37,7 @@ const show_examples = app.component('show-examples', {
             masking_strategy: 'expred',
             selection_strategy: 'hotflip',
             try_others: false,
-            satisfy: false
+            satisfy: false,
         }
     },
     methods: {
@@ -84,7 +84,7 @@ const show_examples = app.component('show-examples', {
                 selection_strategy: this.selection_strategy
             }
             this.eventBus.emit('alt_word_selected', data)
-        }
+        },
     },
     template:
     /*html*/

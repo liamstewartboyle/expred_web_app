@@ -66,6 +66,7 @@ class ExpredCounterAssist:
                                   pos: int, is_subtoken_pos=True,
                                   alternative_words: Union[Tensor, List[str]] = None):
         pred = cf_input.cls_preds_to_class_name(cls_preds)
+        score = cls_preds[0][1].__str__()[7:12]
         subtoken_cf_docs = cf_input.extract_subtoken_docs(cf_input.bert_inputs)
         token_cf_doc = tokenizer.decode_doc_with_span(subtoken_cf_docs[0], cf_input.docs_spans[0])
         pos = self.identify_replaced_token_pos(cf_input, pos, is_subtoken_pos)
@@ -73,7 +74,8 @@ class ExpredCounterAssist:
             'input': token_cf_doc,
             'pred': pred,
             'replaced': pos,
-            'label': cf_input.orig_labels[0]
+            'label': cf_input.orig_labels[0],
+            'score': score
         }
         if alternative_words is not None:
             if isinstance(alternative_words, list):
