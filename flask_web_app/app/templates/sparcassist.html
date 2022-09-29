@@ -16,6 +16,8 @@
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <!-- mitt -->
     <script src="https://unpkg.com/mitt/dist/mitt.umd.js"></script>
+    <!--chartjs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 </head>
 <body>
@@ -102,6 +104,7 @@
 
             <div class='col-sm'>
                 <script src="%%url_for('static', filename='components/show_examples.js')%%"></script>
+                <script src="%%url_for('static', filename='components/graph.js')%%"></script>
                 <div class='h5' v-show="is_cf_example_loading">Loading...</div>
                 <div v-if='is_cf_example_ready'>
                     <show-examples
@@ -113,6 +116,9 @@
                             :label="'%%label%%'">
                     </show-examples>
                 </div>
+                <graph
+                    :cf_examples='cf_examples'>
+                </graph>
                 <div v-else></div>
             </div>
             <div class="restrictions row">
@@ -126,6 +132,5 @@
     const mountedApp = app.mount('#app')
 
 </script>
-
 </body>
 </html>

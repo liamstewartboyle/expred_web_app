@@ -48,6 +48,8 @@ const initial_doc = app.component('initial-doc', {
             ann_id: this.ann_id
         }
     },
+
+
     template:
     /*html*/
         `

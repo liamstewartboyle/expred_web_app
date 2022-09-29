@@ -278,7 +278,7 @@ const show_examples = app.component('show-examples', {
                     </div>
                 </div>
             </div>
-        </div>
+        </div>      
     </div>
     `,
 })

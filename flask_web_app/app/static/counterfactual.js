@@ -10,7 +10,6 @@ const app = Vue.createApp({
             cf_examples: [],
             is_cf_example_loading: false,
             is_cf_example_ready: false,
-            chartData:[]
         }
     },
     mounted() {
@@ -49,10 +48,6 @@ const app = Vue.createApp({
                     this.session_id = response['data']['session_id']
                     this.is_cf_example_ready = true
                     this.is_cf_example_loading = false
-                    this.chartData = []
-                    this.cf_examples['instances'].forEach(element => this.chartData.push(element['score']))
-                    console.log(this.cf_examples['instances'])
-                    console.log(this.chartData)
                 })
                 .catch(error => {
                     console.log(error)
@@ -96,11 +91,6 @@ const app = Vue.createApp({
                     this.session_id = response['data']['session_id']
                     this.is_cf_example_ready = true
                     this.is_cf_example_loading = false
-                    this.chartData = []
-                    this.cf_examples['instances'].forEach(element => this.chartData.push(element['score']))
-                    console.log(this.cf_examples['instances'])
-                    console.log(this.chartData)
-                    console.log(evt['alt_word_id'])
                 })
                 .catch(error => {
                     console.log(error)
