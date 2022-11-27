@@ -104,21 +104,22 @@
 
             <div class='col-sm'>
                 <script src="%%url_for('static', filename='components/show_examples.js')%%"></script>
+                <script src="%%url_for('static', filename='components/graph.js')%%"></script>
                 <div class='h5' v-show="is_cf_example_loading">Loading...</div>
                 <div v-if='is_cf_example_ready'>
                     <show-examples
                             :pos_img_url="'%%url_for('static', filename='imgs/POS.png')%%'"
-                            :neg_img_url="'%%url_for('static', filename='imgs/NEG.png')%%'"
+                            :neg_img_url="'%%url_for('static', filename='imgs/NEG.png')%%'"ent
+
                             :cf_examples='cf_examples'
                             :session_id="session_id"
                             :query="'%%query%%'"
                             :label="'%%label%%'">
                     </show-examples>
                 </div>
-                <script src="%%url_for('static', filename='components/graph.js')%%"></script>
                 <graph
-                    :cf_examples='cf_examples'>
-                </graph>
+                        :cf_examples='cf_examples'>
+                    </graph>
                 <div v-else></div>
             </div>
             <div class="restrictions row">

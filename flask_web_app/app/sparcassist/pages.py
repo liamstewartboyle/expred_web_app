@@ -22,6 +22,7 @@ logger = get_logger('sparcassist')
 @sparcassist_pages.route('/sparcassist', methods=['GET', 'POST'])
 def counterfactual():
     ann_id, query, doc, label = dataset.random_select_data(basic_tokenizer)
+    #ann_id, query, doc, label = dataset.select_data_by_id(basic_tokenizer, 'negR_361.txt')
     cf_input = ExpredInput([query], [doc], [label], cf_config, [ann_id], span_tokenizer).preprocess()
 
     ret = expred(cf_input)

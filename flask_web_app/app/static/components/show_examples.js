@@ -59,6 +59,7 @@ const show_examples = app.component('show-examples', {
                 ann_id: this.ann_id
             }
             this.eventBus.emit('select-sentence', evt)
+            this.eventBus.emit('ret-strategy',this.selection_strategy)
         },
         toggle_try_others() {
             this.try_others = !this.try_others
@@ -84,7 +85,7 @@ const show_examples = app.component('show-examples', {
                 selection_strategy: this.selection_strategy
             }
             this.eventBus.emit('alt_word_selected', data)
-        },
+        }
     },
     template:
     /*html*/
